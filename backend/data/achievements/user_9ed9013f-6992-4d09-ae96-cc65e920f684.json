@@ -1,0 +1,458 @@
+{
+  "focus_first_session": {
+    "achievement_id": "focus_first_session",
+    "progress": 1.0,
+    "current_value": 82,
+    "target_value": 1,
+    "unlocked": true,
+    "unlocked_at": "2026-01-31T22:42:49.513546"
+  },
+  "focus_10_sessions": {
+    "achievement_id": "focus_10_sessions",
+    "progress": 1.0,
+    "current_value": 82,
+    "target_value": 10,
+    "unlocked": true,
+    "unlocked_at": "2026-01-31T22:42:49.513564"
+  },
+  "focus_50_sessions": {
+    "achievement_id": "focus_50_sessions",
+    "progress": 1.0,
+    "current_value": 82,
+    "target_value": 50,
+    "unlocked": true,
+    "unlocked_at": "2026-01-31T22:42:49.513568"
+  },
+  "focus_100_sessions": {
+    "achievement_id": "focus_100_sessions",
+    "progress": 0.88,
+    "current_value": 88,
+    "target_value": 100,
+    "unlocked": false,
+    "unlocked_at": null
+  },
+  "focus_500_sessions": {
+    "achievement_id": "focus_500_sessions",
+    "progress": 0.176,
+    "current_value": 88,
+    "target_value": 500,
+    "unlocked": false,
+    "unlocked_at": null
+  },
+  "focus_30min": {
+    "achievement_id": "focus_30min",
+    "progress": 1.0,
+    "current_value": 50,
+    "target_value": 30,
+    "unlocked": true,
+    "unlocked_at": "2026-01-31T22:42:49.513572"
+  },
+  "focus_45min": {
+    "achievement_id": "focus_45min",
+    "progress": 1.0,
+    "current_value": 50,
+    "target_value": 45,
+    "unlocked": true,
+    "unlocked_at": "2026-01-31T22:42:49.513574"
+  },
+  "focus_60min": {
+    "achievement_id": "focus_60min",
+    "progress": 0.016666666666666666,
+    "current_value": 1,
+    "target_value": 60,
+    "unlocked": false,
+    "unlocked_at": null
+  },
+  "focus_total_1h": {
+    "achievement_id": "focus_total_1h",
+    "progress": 1.0,
+    "current_value": 4235.0,
+    "target_value": 60,
+    "unlocked": true,
+    "unlocked_at": "2026-01-31T22:42:49.513578"
+  },
+  "focus_total_10h": {
+    "achievement_id": "focus_total_10h",
+    "progress": 1.0,
+    "current_value": 4235.0,
+    "target_value": 600,
+    "unlocked": true,
+    "unlocked_at": "2026-01-31T22:42:49.513580"
+  },
+  "focus_total_50h": {
+    "achievement_id": "focus_total_50h",
+    "progress": 1.0,
+    "current_value": 4235.0,
+    "target_value": 3000,
+    "unlocked": true,
+    "unlocked_at": "2026-01-31T22:42:49.513582"
+  },
+  "focus_total_100h": {
+    "achievement_id": "focus_total_100h",
+    "progress": 0.7068333333333333,
+    "current_value": 4241.0,
+    "target_value": 6000,
+    "unlocked": false,
+    "unlocked_at": null
+  },
+  "focus_no_abort": {
+    "achievement_id": "focus_no_abort",
+    "progress": 0.0,
+    "current_value": 0,
+    "target_value": 5,
+    "unlocked": false,
+    "unlocked_at": null
+  },
+  "focus_no_abort_10": {
+    "achievement_id": "focus_no_abort_10",
+    "progress": 0.0,
+    "current_value": 0,
+    "target_value": 10,
+    "unlocked": false,
+    "unlocked_at": null
+  },
+  "focus_high_difficulty": {
+    "achievement_id": "focus_high_difficulty",
+    "progress": 0.0,
+    "current_value": 0,
+    "target_value": 5,
+    "unlocked": false,
+    "unlocked_at": null
+  },
+  "streak_3days": {
+    "achievement_id": "streak_3days",
+    "progress": 0.0,
+    "current_value": 0,
+    "target_value": 3,
+    "unlocked": false,
+    "unlocked_at": null
+  },
+  "streak_7days": {
+    "achievement_id": "streak_7days",
+    "progress": 0.0,
+    "current_value": 0,
+    "target_value": 7,
+    "unlocked": false,
+    "unlocked_at": null
+  },
+  "streak_14days": {
+    "achievement_id": "streak_14days",
+    "progress": 0.0,
+    "current_value": 0,
+    "target_value": 14,
+    "unlocked": false,
+    "unlocked_at": null
+  },
+  "streak_30days": {
+    "achievement_id": "streak_30days",
+    "progress": 0.0,
+    "current_value": 0,
+    "target_value": 30,
+    "unlocked": false,
+    "unlocked_at": null
+  },
+  "streak_60days": {
+    "achievement_id": "streak_60days",
+    "progress": 0.0,
+    "current_value": 0,
+    "target_value": 60,
+    "unlocked": false,
+    "unlocked_at": null
+  },
+  "streak_100days": {
+    "achievement_id": "streak_100days",
+    "progress": 0.0,
+    "current_value": 0,
+    "target_value": 100,
+    "unlocked": false,
+    "unlocked_at": null
+  },
+  "streak_weekend": {
+    "achievement_id": "streak_weekend",
+    "progress": 1.0,
+    "current_value": 1,
+    "target_value": 1,
+    "unlocked": true,
+    "unlocked_at": "2026-01-31T22:42:49.513591"
+  },
+  "streak_10_weekends": {
+    "achievement_id": "streak_10_weekends",
+    "progress": 0.0,
+    "current_value": 0,
+    "target_value": 10,
+    "unlocked": false,
+    "unlocked_at": null
+  },
+  "streak_daily_3": {
+    "achievement_id": "streak_daily_3",
+    "progress": 0.0,
+    "current_value": 0,
+    "target_value": 3,
+    "unlocked": false,
+    "unlocked_at": null
+  },
+  "streak_daily_5": {
+    "achievement_id": "streak_daily_5",
+    "progress": 0.0,
+    "current_value": 0,
+    "target_value": 5,
+    "unlocked": false,
+    "unlocked_at": null
+  },
+  "time_early_bird": {
+    "achievement_id": "time_early_bird",
+    "progress": 0.0,
+    "current_value": 0,
+    "target_value": 6,
+    "unlocked": false,
+    "unlocked_at": null
+  },
+  "time_morning_glory": {
+    "achievement_id": "time_morning_glory",
+    "progress": 0.0,
+    "current_value": 0,
+    "target_value": 10,
+    "unlocked": false,
+    "unlocked_at": null
+  },
+  "time_night_owl": {
+    "achievement_id": "time_night_owl",
+    "progress": 0.0,
+    "current_value": 0,
+    "target_value": 23,
+    "unlocked": false,
+    "unlocked_at": null
+  },
+  "time_midnight": {
+    "achievement_id": "time_midnight",
+    "progress": 0.0,
+    "current_value": 0,
+    "target_value": 1,
+    "unlocked": false,
+    "unlocked_at": null
+  },
+  "time_all_hours": {
+    "achievement_id": "time_all_hours",
+    "progress": 0.0,
+    "current_value": 0,
+    "target_value": 6,
+    "unlocked": false,
+    "unlocked_at": null
+  },
+  "time_lunch_break": {
+    "achievement_id": "time_lunch_break",
+    "progress": 0.0,
+    "current_value": 0,
+    "target_value": 1,
+    "unlocked": false,
+    "unlocked_at": null
+  },
+  "time_golden_hour": {
+    "achievement_id": "time_golden_hour",
+    "progress": 0.0,
+    "current_value": 0,
+    "target_value": 10,
+    "unlocked": false,
+    "unlocked_at": null
+  },
+  "time_consistent": {
+    "achievement_id": "time_consistent",
+    "progress": 0.0,
+    "current_value": 0,
+    "target_value": 20,
+    "unlocked": false,
+    "unlocked_at": null
+  },
+  "milestone_coins_100": {
+    "achievement_id": "milestone_coins_100",
+    "progress": 1.0,
+    "current_value": 59920,
+    "target_value": 100,
+    "unlocked": true,
+    "unlocked_at": "2026-01-31T22:42:49.513599"
+  },
+  "milestone_coins_500": {
+    "achievement_id": "milestone_coins_500",
+    "progress": 1.0,
+    "current_value": 59920,
+    "target_value": 500,
+    "unlocked": true,
+    "unlocked_at": "2026-01-31T22:42:49.513601"
+  },
+  "milestone_coins_1000": {
+    "achievement_id": "milestone_coins_1000",
+    "progress": 1.0,
+    "current_value": 59920,
+    "target_value": 1000,
+    "unlocked": true,
+    "unlocked_at": "2026-01-31T22:42:49.513603"
+  },
+  "milestone_coins_5000": {
+    "achievement_id": "milestone_coins_5000",
+    "progress": 1.0,
+    "current_value": 59920,
+    "target_value": 5000,
+    "unlocked": true,
+    "unlocked_at": "2026-01-31T22:42:49.513605"
+  },
+  "milestone_reading": {
+    "achievement_id": "milestone_reading",
+    "progress": 0.0,
+    "current_value": 0,
+    "target_value": 20,
+    "unlocked": false,
+    "unlocked_at": null
+  },
+  "milestone_practice": {
+    "achievement_id": "milestone_practice",
+    "progress": 0.0,
+    "current_value": 0,
+    "target_value": 20,
+    "unlocked": false,
+    "unlocked_at": null
+  },
+  "milestone_creation": {
+    "achievement_id": "milestone_creation",
+    "progress": 0.0,
+    "current_value": 0,
+    "target_value": 20,
+    "unlocked": false,
+    "unlocked_at": null
+  },
+  "milestone_routine": {
+    "achievement_id": "milestone_routine",
+    "progress": 0.0,
+    "current_value": 0,
+    "target_value": 20,
+    "unlocked": false,
+    "unlocked_at": null
+  },
+  "milestone_all_types": {
+    "achievement_id": "milestone_all_types",
+    "progress": 0.0,
+    "current_value": 0,
+    "target_value": 10,
+    "unlocked": false,
+    "unlocked_at": null
+  },
+  "milestone_achievements_10": {
+    "achievement_id": "milestone_achievements_10",
+    "progress": 0.9,
+    "current_value": 9,
+    "target_value": 10,
+    "unlocked": false,
+    "unlocked_at": null
+  },
+  "milestone_achievements_25": {
+    "achievement_id": "milestone_achievements_25",
+    "progress": 0.36,
+    "current_value": 9,
+    "target_value": 25,
+    "unlocked": false,
+    "unlocked_at": null
+  },
+  "milestone_achievements_50": {
+    "achievement_id": "milestone_achievements_50",
+    "progress": 0.18,
+    "current_value": 9,
+    "target_value": 50,
+    "unlocked": false,
+    "unlocked_at": null
+  },
+  "special_comeback": {
+    "achievement_id": "special_comeback",
+    "progress": 0.0,
+    "current_value": 0,
+    "target_value": 7,
+    "unlocked": false,
+    "unlocked_at": null
+  },
+  "special_improvement": {
+    "achievement_id": "special_improvement",
+    "progress": 0.0,
+    "current_value": 0,
+    "target_value": 20,
+    "unlocked": false,
+    "unlocked_at": null
+  },
+  "special_ai_follower": {
+    "achievement_id": "special_ai_follower",
+    "progress": 0.0,
+    "current_value": 0,
+    "target_value": 10,
+    "unlocked": false,
+    "unlocked_at": null
+  },
+  "special_micro_routine": {
+    "achievement_id": "special_micro_routine",
+    "progress": 0.0,
+    "current_value": 0,
+    "target_value": 5,
+    "unlocked": false,
+    "unlocked_at": null
+  },
+  "special_no_phone": {
+    "achievement_id": "special_no_phone",
+    "progress": 0.0,
+    "current_value": 0,
+    "target_value": 10,
+    "unlocked": false,
+    "unlocked_at": null
+  },
+  "special_variety": {
+    "achievement_id": "special_variety",
+    "progress": 0.0,
+    "current_value": 0,
+    "target_value": 5,
+    "unlocked": false,
+    "unlocked_at": null
+  },
+  "special_new_year": {
+    "achievement_id": "special_new_year",
+    "progress": 0.0,
+    "current_value": 0,
+    "target_value": 1,
+    "unlocked": false,
+    "unlocked_at": null
+  },
+  "hidden_first_abort": {
+    "achievement_id": "hidden_first_abort",
+    "progress": 0.0,
+    "current_value": 0,
+    "target_value": 1,
+    "unlocked": false,
+    "unlocked_at": null
+  },
+  "hidden_3am_club": {
+    "achievement_id": "hidden_3am_club",
+    "progress": 0.0,
+    "current_value": 0,
+    "target_value": 3,
+    "unlocked": false,
+    "unlocked_at": null
+  },
+  "hidden_420": {
+    "achievement_id": "hidden_420",
+    "progress": 0.0,
+    "current_value": 0,
+    "target_value": 1,
+    "unlocked": false,
+    "unlocked_at": null
+  },
+  "hidden_palindrome": {
+    "achievement_id": "hidden_palindrome",
+    "progress": 0.0,
+    "current_value": 0,
+    "target_value": 1,
+    "unlocked": false,
+    "unlocked_at": null
+  },
+  "hidden_lucky_7": {
+    "achievement_id": "hidden_lucky_7",
+    "progress": 0.0,
+    "current_value": 0,
+    "target_value": 1,
+    "unlocked": false,
+    "unlocked_at": null
+  }
+}

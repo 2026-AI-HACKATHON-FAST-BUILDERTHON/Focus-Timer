@@ -3,7 +3,6 @@ import { GlobalStyles } from './styles/GlobalStyles';
 import LoginPage from './pages/LoginPage';
 import TimerPage from './pages/TimerPage';
 import SurveyPage from './pages/SurveyPage';
-import { Agentation } from 'agentation';
 
 type AppState = 'login' | 'survey' | 'timer';
 
@@ -49,11 +48,6 @@ function App() {
     setAppState('timer');
   };
 
-  
-  const handleAnnotationCopy = (markdown: string) => {
-    console.log('UI 피드백 복사됨:', markdown);
-  };
-
   return (
     <>
       <GlobalStyles />
@@ -69,10 +63,6 @@ function App() {
         <TimerPage
           userMBTI={userMBTI}
         />
-      )}
-      {/* 개발 모드에서 UI 피드백 수집 도구 */}
-      {process.env.NODE_ENV === 'development' && (
-        <Agentation onCopy={handleAnnotationCopy} />
       )}
     </>
   );
