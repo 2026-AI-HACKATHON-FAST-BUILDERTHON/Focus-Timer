@@ -1,7 +1,7 @@
 # Focus Timer - AI 기반 집중 타이머
 
 <div align="center">
-  <img src="docs/logo.png" alt="Focus Timer Logo" width="200"/>
+  <img src="docs/logo.gif" alt="Focus Timer Logo" width="200"/>
 
   **"집중하지 못하는 당신을 위한 AI 타이머"**
 
