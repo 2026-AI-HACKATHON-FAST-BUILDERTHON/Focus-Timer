@@ -970,7 +970,7 @@ const TimerPage: React.FC<TimerPageProps> = ({ userMBTI }) => {
                 <section className="about-section">
                   <h3><i className="bi bi-people-fill"></i> 팀 소개</h3>
                   <div className="team-card">
-                    <div className="team-name">간장코드조림</div>
+                    <div className="team-name">코드간장조림</div>
                     <div className="team-event">FAST BUILDERTHON 2026</div>
                     <div className="team-members">
                       <span>신주용</span>
