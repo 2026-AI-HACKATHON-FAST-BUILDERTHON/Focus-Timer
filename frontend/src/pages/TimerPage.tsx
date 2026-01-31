@@ -424,17 +424,15 @@ const TimerPage: React.FC<TimerPageProps> = ({ userMBTI }) => {
     setEarnedCoins(0);
   };
 
-  // 레벨에 따른 칭호
+  // 레벨에 따른 칭호 (백엔드와 동일)
   const getLevelTitle = (level: number): string => {
-    if (level >= 50) return '전설의 집중왕';
-    if (level >= 40) return '마스터';
-    if (level >= 30) return '전문가';
-    if (level >= 20) return '숙련자';
-    if (level >= 15) return '중급자';
-    if (level >= 10) return '도전자';
-    if (level >= 5) return '초보자';
-    if (level >= 2) return '새싹';
-    return '입문자';
+    switch (level) {
+      case 5: return '마스터';
+      case 4: return '집중러';
+      case 3: return '수련생';
+      case 2: return '초보자';
+      default: return '새싹';
+    }
   };
 
   // 달성 시간에 따른 축하 메시지
