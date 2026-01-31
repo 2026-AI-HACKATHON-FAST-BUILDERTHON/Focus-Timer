@@ -32,6 +32,10 @@
 
 ## 프로젝트 소개
 
+> **🚀 바로 체험하기:** https://focus-timer-web.onrender.com
+>
+> **🔑 테스트 계정:** `test@focustimer.com` / `test1234`
+
 ### 문제 정의
 
 현대인의 집중력 저하는 심각한 문제입니다. 스마트폰, SNS, 끊임없는 알림으로 인해 깊은 집중(Deep Work)을 하기 어려워졌습니다. 기존의 뽀모도로 타이머는 모든 사용자에게 동일한 25분을 강요하지만, 실제로는:
@@ -806,7 +810,7 @@ flowchart LR
 |------|-----|
 | Email | `test@focustimer.com` |
 | Password | `test1234` |
-| Nickname | 최강록 |
+| Nickname | 코드간장조림 |
 | 특징 | 만렙 계정 (코인 999,999 / 연속 100일 / 업적 25개 전부 달성) |
 
 ---
