@@ -64,6 +64,28 @@ const difficultyData: Record<number, { label: string; description: string; aiEff
   },
 };
 
+// 추천 텍스트를 개행 처리하는 헬퍼 함수
+const formatRecommendationText = (text: string): string[] => {
+  // 마침표, 느낌표, 물음표 뒤에서 분리 (단, 숫자% 뒤의 마침표는 제외)
+  const sentences = text
+    .split(/(?<=[.!?])\s+/)
+    .filter(s => s.trim().length > 0);
+  return sentences;
+};
+
+// 값 범위 제한 헬퍼 함수
+const clampValue = (value: number, min: number, max: number): number => {
+  if (isNaN(value)) return min;
+  return Math.max(min, Math.min(max, value));
+};
+
+// 시간 설정 제한 상수
+const TIME_LIMITS = {
+  focusMinutes: { min: 1, max: 60 },    // 집중: 1~60분
+  breakMinutes: { min: 1, max: 30 },    // 휴식: 1~30분
+  rounds: { min: 1, max: 10 },          // 라운드: 1~10회
+};
+
 const SessionSetup: React.FC<SessionSetupProps> = ({ onStart, recommendation, isLoading }) => {
   const [config, setConfig] = useState<SessionConfig>({
     taskType: 'reading',
@@ -117,11 +139,22 @@ const SessionSetup: React.FC<SessionSetupProps> = ({ onStart, recommendation, is
                 </span>
               )}
             </div>
-            <p className="recommendation-text">{recommendation.reason}</p>
+            <div className="recommendation-text">
+              {formatRecommendationText(recommendation.reason).map((sentence, idx) => (
+                <p key={idx}>{sentence}</p>
+              ))}
+            </div>
             {recommendation.microRoutine && (
               <div className="micro-routine">
-                <i className="bi bi-stars"></i>
-                {recommendation.microRoutine}
+                <i className="bi bi-lightbulb-fill"></i>
+                <div className="micro-routine-content">
+                  <span className="micro-routine-label">시작 전 루틴</span>
+                  <div className="micro-routine-text">
+                    {formatRecommendationText(recommendation.microRoutine).map((sentence, idx) => (
+                      <p key={idx}>{sentence}</p>
+                    ))}
+                  </div>
+                </div>
               </div>
             )}
             <div className="recommendation-values">
@@ -220,57 +253,54 @@ const SessionSetup: React.FC<SessionSetupProps> = ({ onStart, recommendation, is
 
           <div className="time-settings">
             <div className="time-setting">
-              <label>집중 시간</label>
+              <label>집중 시간 <span className="limit-hint">(1~60분)</span></label>
               <div className="time-input-wrapper">
                 <input
                   type="number"
-                  min="1"
-                  max="60"
+                  min={TIME_LIMITS.focusMinutes.min}
+                  max={TIME_LIMITS.focusMinutes.max}
                   value={config.focusMinutes}
-                  onChange={(e) =>
-                    setConfig((prev) => ({
-                      ...prev,
-                      focusMinutes: parseInt(e.target.value) || 1,
-                    }))
-                  }
+                  onChange={(e) => {
+                    const value = parseInt(e.target.value) || TIME_LIMITS.focusMinutes.min;
+                    const clamped = clampValue(value, TIME_LIMITS.focusMinutes.min, TIME_LIMITS.focusMinutes.max);
+                    setConfig((prev) => ({ ...prev, focusMinutes: clamped }));
+                  }}
                 />
                 <span>분</span>
               </div>
             </div>
 
             <div className="time-setting">
-              <label>휴식 시간</label>
+              <label>휴식 시간 <span className="limit-hint">(1~30분)</span></label>
               <div className="time-input-wrapper">
                 <input
                   type="number"
-                  min="1"
-                  max="30"
+                  min={TIME_LIMITS.breakMinutes.min}
+                  max={TIME_LIMITS.breakMinutes.max}
                   value={config.breakMinutes}
-                  onChange={(e) =>
-                    setConfig((prev) => ({
-                      ...prev,
-                      breakMinutes: parseInt(e.target.value) || 1,
-                    }))
-                  }
+                  onChange={(e) => {
+                    const value = parseInt(e.target.value) || TIME_LIMITS.breakMinutes.min;
+                    const clamped = clampValue(value, TIME_LIMITS.breakMinutes.min, TIME_LIMITS.breakMinutes.max);
+                    setConfig((prev) => ({ ...prev, breakMinutes: clamped }));
+                  }}
                 />
                 <span>분</span>
               </div>
             </div>
 
             <div className="time-setting">
-              <label>라운드</label>
+              <label>라운드 <span className="limit-hint">(1~10회)</span></label>
               <div className="time-input-wrapper">
                 <input
                   type="number"
-                  min="1"
-                  max="10"
+                  min={TIME_LIMITS.rounds.min}
+                  max={TIME_LIMITS.rounds.max}
                   value={config.rounds}
-                  onChange={(e) =>
-                    setConfig((prev) => ({
-                      ...prev,
-                      rounds: parseInt(e.target.value) || 1,
-                    }))
-                  }
+                  onChange={(e) => {
+                    const value = parseInt(e.target.value) || TIME_LIMITS.rounds.min;
+                    const clamped = clampValue(value, TIME_LIMITS.rounds.min, TIME_LIMITS.rounds.max);
+                    setConfig((prev) => ({ ...prev, rounds: clamped }));
+                  }}
                 />
                 <span>회</span>
               </div>
@@ -350,29 +380,67 @@ const StyledWrapper = styled.div`
   }
 
   .recommendation-text {
-    color: #4A5568;
-    font-size: 14px;
-    line-height: 1.5;
-    margin-bottom: 12px;
+    margin-bottom: 14px;
+
+    p {
+      color: #4A5568;
+      font-size: 14px;
+      line-height: 1.6;
+      margin: 0 0 6px 0;
+
+      &:last-child {
+        margin-bottom: 0;
+      }
+
+      &:first-child {
+        font-weight: 600;
+        color: #2D3748;
+      }
+    }
   }
 
   .micro-routine {
-    background: #FFFAF0;
+    background: linear-gradient(135deg, #FFFAF0 0%, #FFF5EB 100%);
     border: 1px solid #F6AD55;
-    border-radius: 10px;
-    padding: 10px 14px;
-    font-size: 13px;
-    color: #C05621;
-    margin-bottom: 12px;
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-bottom: 14px;
     display: flex;
     align-items: flex-start;
-    gap: 8px;
+    gap: 12px;
 
     i {
       color: #F6AD55;
-      font-size: 16px;
+      font-size: 20px;
       flex-shrink: 0;
-      margin-top: 1px;
+      margin-top: 2px;
+    }
+  }
+
+  .micro-routine-content {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .micro-routine-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: #C05621;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .micro-routine-text {
+    p {
+      font-size: 14px;
+      color: #744210;
+      line-height: 1.6;
+      margin: 0 0 4px 0;
+
+      &:last-child {
+        margin-bottom: 0;
+      }
     }
   }
 
@@ -605,6 +673,20 @@ const StyledWrapper = styled.div`
 
   .time-setting {
     text-align: center;
+
+    label {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      flex-wrap: wrap;
+    }
+  }
+
+  .limit-hint {
+    font-size: 10px;
+    color: #A0AEC0;
+    font-weight: 400;
   }
 
   .time-input-wrapper {

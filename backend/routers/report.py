@@ -1,15 +1,15 @@
 """
-리포트 API 라우터
+리포트 API 라우터 - Supabase DB 연동
 """
 
 from fastapi import APIRouter, Depends
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from collections import defaultdict
 
 from models.schemas import WeeklyReportResponse
 from services.recommender_rules import generate_weekly_experiment
 from routers.auth import get_current_user
-from routers.sessions import sessions_db
+from database.connection import get_cursor
 
 router = APIRouter(prefix="/report", tags=["Report"])
 
@@ -26,22 +26,32 @@ async def get_weekly_report(
     - 시간대별 분석
     - AI 기반 실험 추천
     """
-    user_id = user["user_id"]
-    now = datetime.utcnow()
+    user_id = str(user["id"])
+    now = datetime.now(timezone.utc)
     week_ago = now - timedelta(days=7)
 
-    # 최근 7일 세션 필터링
-    weekly_sessions = [
-        s for s in sessions_db.values()
-        if s["user_id"] == user_id
-        and s["status"] is not None
-        and s["created_at"] >= week_ago
-    ]
+    # DB에서 최근 7일 세션 조회
+    with get_cursor() as cur:
+        cur.execute(
+            """
+            SELECT id, user_id, task_type, difficulty, goal, status,
+                   total_focus_sec, total_break_sec, rounds_completed,
+                   coin_reward, start_hour, day_of_week, abort_reason,
+                   created_at, completed_at
+            FROM sessions
+            WHERE user_id = %s
+              AND status IN ('completed', 'aborted')
+              AND created_at >= %s
+            ORDER BY created_at DESC
+            """,
+            (user_id, week_ago)
+        )
+        weekly_sessions = [dict(s) for s in cur.fetchall()]
 
     # 기본 통계
     total_sessions = len(weekly_sessions)
     completed_sessions = sum(1 for s in weekly_sessions if s["status"] == "completed")
-    total_focus_minutes = sum(s["total_focus_sec"] for s in weekly_sessions) // 60
+    total_focus_minutes = sum(s["total_focus_sec"] or 0 for s in weekly_sessions) // 60
 
     completion_rate = (
         completed_sessions / total_sessions if total_sessions > 0 else 0
@@ -79,18 +89,22 @@ async def get_weekly_report(
     daily_stats = []
     for i in range(7):
         day = now - timedelta(days=6 - i)
-        day_start = day.replace(hour=0, minute=0, second=0, microsecond=0)
+        day_start = day.replace(hour=0, minute=0, second=0, microsecond=0, tzinfo=timezone.utc)
         day_end = day_start + timedelta(days=1)
 
-        day_sessions = [
-            s for s in weekly_sessions
-            if day_start <= s["created_at"] < day_end
-        ]
+        day_sessions = []
+        for s in weekly_sessions:
+            created = s["created_at"]
+            # timezone-aware 비교
+            if created.tzinfo is None:
+                created = created.replace(tzinfo=timezone.utc)
+            if day_start <= created < day_end:
+                day_sessions.append(s)
 
         daily_stats.append({
             "date": day_start.strftime("%Y-%m-%d"),
             "day_name": ["월", "화", "수", "목", "금", "토", "일"][day_start.weekday()],
-            "focus_minutes": sum(s["total_focus_sec"] for s in day_sessions) // 60,
+            "focus_minutes": sum(s["total_focus_sec"] or 0 for s in day_sessions) // 60,
             "sessions": len(day_sessions),
             "completed": sum(1 for s in day_sessions if s["status"] == "completed"),
         })

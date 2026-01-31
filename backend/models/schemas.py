@@ -82,14 +82,14 @@ class SessionResponse(BaseModel):
     user_id: str
     task_type: TaskType
     difficulty: int
-    goal: Optional[str]
-    mode_plan: List[dict]
+    goal: Optional[str] = None
+    mode_plan: Optional[List[dict]] = None
     status: SessionStatus
-    abort_reason: Optional[AbortReason]
-    total_focus_sec: int
-    total_break_sec: int
-    rounds_completed: int
-    coin_reward: int
+    abort_reason: Optional[AbortReason] = None
+    total_focus_sec: int = 0
+    total_break_sec: int = 0
+    rounds_completed: int = 0
+    coin_reward: int = 0
     created_at: datetime
 
 

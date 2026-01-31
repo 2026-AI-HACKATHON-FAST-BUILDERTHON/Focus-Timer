@@ -13,11 +13,11 @@ function App() {
 
   // 앱 시작 시 저장된 상태 확인
   useEffect(() => {
-    const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+    const authToken = localStorage.getItem('authToken');
     const surveyCompleted = localStorage.getItem('mbtiSurveyCompleted') === 'true';
     const savedMBTI = localStorage.getItem('userMBTI');
 
-    if (isLoggedIn) {
+    if (authToken) {
       if (surveyCompleted && savedMBTI) {
         setUserMBTI(savedMBTI);
         setAppState('timer');

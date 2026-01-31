@@ -1,7 +1,8 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import styled from 'styled-components';
-import Hamster from '../components/character/Hamster';
+import LevelCat from '../components/character/LevelCat';
 import StatusText from '../components/character/StatusText';
+import Loader from '../components/common/Loader';
 import TimerDisplay from '../components/timer/TimerDisplay';
 import Controls from '../components/timer/Controls';
 import SessionSetup, { SessionConfig } from '../components/session/SessionSetup';
@@ -29,7 +30,7 @@ interface Stats {
   weeklyMinutes: number[];
 }
 
-// 도전과제 타입
+// 도전과제 타입 (API 응답과 맞춤)
 interface Achievement {
   id: string;
   name: string;
@@ -37,26 +38,11 @@ interface Achievement {
   category: string;
   rarity: string;
   icon: string;
-  coinReward: number;
+  coin_reward: number;
   unlocked: boolean;
+  unlocked_at?: string;
   progress?: number;
 }
-
-// 도전과제 데이터 (실제로는 API에서 가져옴)
-const ACHIEVEMENTS_DATA: Achievement[] = [
-  { id: 'first_session', name: '첫 걸음', description: '첫 세션 완료', category: 'focus', rarity: 'common', icon: 'bi-play-circle-fill', coinReward: 10, unlocked: true },
-  { id: 'focus_10', name: '입문자', description: '10회 세션 완료', category: 'focus', rarity: 'common', icon: 'bi-lightning-fill', coinReward: 50, unlocked: true },
-  { id: 'focus_50', name: '집중러', description: '50회 세션 완료', category: 'focus', rarity: 'uncommon', icon: 'bi-fire', coinReward: 100, unlocked: false, progress: 0.24 },
-  { id: 'streak_3', name: '3일 연속', description: '3일 연속 집중', category: 'streak', rarity: 'common', icon: 'bi-calendar-check', coinReward: 30, unlocked: true },
-  { id: 'streak_7', name: '일주일 도전', description: '7일 연속 집중', category: 'streak', rarity: 'uncommon', icon: 'bi-trophy', coinReward: 100, unlocked: false, progress: 0.43 },
-  { id: 'streak_30', name: '한 달 마스터', description: '30일 연속 집중', category: 'streak', rarity: 'rare', icon: 'bi-award-fill', coinReward: 500, unlocked: false, progress: 0.1 },
-  { id: 'early_bird', name: '얼리버드', description: '오전 6시 이전 세션', category: 'time', rarity: 'uncommon', icon: 'bi-sunrise-fill', coinReward: 50, unlocked: false },
-  { id: 'night_owl', name: '올빼미', description: '자정 이후 세션 완료', category: 'time', rarity: 'uncommon', icon: 'bi-moon-stars-fill', coinReward: 50, unlocked: true },
-  { id: 'focus_60min', name: '1시간 도전', description: '60분 이상 집중', category: 'focus', rarity: 'rare', icon: 'bi-hourglass-split', coinReward: 100, unlocked: false, progress: 0.75 },
-  { id: 'all_tasks', name: '만능 학습자', description: '모든 과제 유형 완료', category: 'milestone', rarity: 'rare', icon: 'bi-grid-fill', coinReward: 200, unlocked: false, progress: 0.5 },
-  { id: 'comeback_kid', name: '돌아온 집중러', description: '7일 후 복귀 세션', category: 'special', rarity: 'uncommon', icon: 'bi-arrow-repeat', coinReward: 75, unlocked: false },
-  { id: 'perfectionist', name: '완벽주의자', description: '5연속 완주', category: 'special', rarity: 'epic', icon: 'bi-star-fill', coinReward: 300, unlocked: false, progress: 0.4 },
-];
 
 // MBTI 프로필 데이터
 const MBTI_PROFILES: Record<string, { name: string; nickname: string; focusRange: [number, number] }> = {
@@ -85,14 +71,18 @@ interface TimerPageProps {
 const TimerPage: React.FC<TimerPageProps> = ({ userMBTI }) => {
   const [pageState, setPageState] = useState<PageState>('setup');
   const [sessionConfig, setSessionConfig] = useState<SessionConfig | null>(null);
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
+  const [sessionStartTime, setSessionStartTime] = useState<Date | null>(null);
   const [showAbortModal, setShowAbortModal] = useState(false);
   const [showStatsModal, setShowStatsModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showAchievementsModal, setShowAchievementsModal] = useState(false);
   const [showMBTIModal, setShowMBTIModal] = useState(false);
   const [showAnalysisModal, setShowAnalysisModal] = useState(false);
-  const [achievements] = useState<Achievement[]>(ACHIEVEMENTS_DATA);
+  const [achievements, setAchievements] = useState<Achievement[]>([]);
+  const [achievementsLoading, setAchievementsLoading] = useState(false);
   const [earnedCoins, setEarnedCoins] = useState(0);
+  const [userLevel, setUserLevel] = useState(1);
 
   // AI 추천 상태
   const [recommendation, setRecommendation] = useState<{
@@ -200,48 +190,126 @@ const TimerPage: React.FC<TimerPageProps> = ({ userMBTI }) => {
     }
   }, [pageState, fetchRecommendation]);
 
+  // 사용자 레벨 가져오기
+  useEffect(() => {
+    const fetchUserLevel = async () => {
+      try {
+        const levelInfo = await api.getUserLevel();
+        setUserLevel(levelInfo.level);
+      } catch (error) {
+        console.error('Failed to fetch user level:', error);
+        setUserLevel(1); // 기본 레벨
+      }
+    };
+    fetchUserLevel();
+  }, []);
+
+  // 도전과제 가져오기
+  const fetchAchievements = useCallback(async () => {
+    setAchievementsLoading(true);
+    try {
+      const response = await api.getAchievements();
+      setAchievements(response.achievements);
+    } catch (error) {
+      console.error('Failed to fetch achievements:', error);
+    } finally {
+      setAchievementsLoading(false);
+    }
+  }, []);
+
+  // 도전과제 모달 열릴 때 데이터 로드
+  useEffect(() => {
+    if (showAchievementsModal) {
+      fetchAchievements();
+    }
+  }, [showAchievementsModal, fetchAchievements]);
+
   const handlePhaseComplete = useCallback((phase: TimerPhase) => {
     if (phase.type === 'focus') {
       console.log('Focus phase complete!');
     }
   }, []);
 
-  const handleSessionComplete = useCallback(() => {
+  const handleSessionComplete = useCallback(async () => {
     if (sessionConfig) {
       const totalFocusMinutes = sessionConfig.focusMinutes * sessionConfig.rounds;
-      const coins = totalFocusMinutes * 10;
-      setEarnedCoins(coins);
+      const totalFocusSec = totalFocusMinutes * 60;
+      const totalBreakSec = sessionConfig.breakMinutes * (sessionConfig.rounds - 1) * 60;
 
-      // 통계 업데이트
+      // 백엔드 API 호출
+      if (currentSessionId) {
+        try {
+          const response = await api.completeSession({
+            session_id: currentSessionId,
+            total_focus_sec: totalFocusSec,
+            total_break_sec: totalBreakSec,
+            rounds_completed: sessionConfig.rounds,
+          });
+          setEarnedCoins(response.coin_reward);
+
+          // 도전과제 확인
+          api.checkAchievements().catch(console.error);
+        } catch (error) {
+          console.error('Failed to complete session:', error);
+          // API 실패시 로컬 계산값 사용
+          setEarnedCoins(totalFocusMinutes * 10);
+        }
+      } else {
+        setEarnedCoins(totalFocusMinutes * 10);
+      }
+
+      // 로컬 통계 업데이트
       const today = new Date().getDay();
-      const dayIndex = today === 0 ? 6 : today - 1; // 월=0, 일=6
+      const dayIndex = today === 0 ? 6 : today - 1;
       const newWeeklyMinutes = [...stats.weeklyMinutes];
       newWeeklyMinutes[dayIndex] += totalFocusMinutes;
 
       updateStats({
-        totalCoins: stats.totalCoins + coins,
+        totalCoins: stats.totalCoins + (totalFocusMinutes * 10),
         completedSessions: stats.completedSessions + 1,
         weeklyMinutes: newWeeklyMinutes,
       });
     }
     setPageState('completed');
-  }, [sessionConfig, stats, updateStats]);
+    setCurrentSessionId(null);
+  }, [sessionConfig, currentSessionId, stats, updateStats]);
 
   const timer = useTimer({
     onPhaseComplete: handlePhaseComplete,
     onSessionComplete: handleSessionComplete,
   });
 
-  const handleStartSession = (config: SessionConfig) => {
+  const handleStartSession = async (config: SessionConfig) => {
     setSessionConfig(config);
+    setSessionStartTime(new Date());
 
-    const phases: TimerPhase[] = [];
+    // mode_plan 생성
+    const modePlan: Array<{ type: 'focus' | 'break'; minutes: number }> = [];
     for (let i = 0; i < config.rounds; i++) {
-      phases.push({ type: 'focus', minutes: config.focusMinutes });
+      modePlan.push({ type: 'focus', minutes: config.focusMinutes });
       if (i < config.rounds - 1) {
-        phases.push({ type: 'break', minutes: config.breakMinutes });
+        modePlan.push({ type: 'break', minutes: config.breakMinutes });
       }
     }
+
+    // 백엔드 API 호출
+    try {
+      const response = await api.startSession({
+        task_type: (config.taskType || 'reading') as 'reading' | 'practice' | 'creation' | 'routine',
+        difficulty: config.difficulty || 3,
+        goal: config.goal,
+        mode_plan: modePlan,
+      });
+      setCurrentSessionId(response.id);
+    } catch (error) {
+      console.error('Failed to start session:', error);
+      // API 실패해도 타이머는 시작
+    }
+
+    const phases: TimerPhase[] = modePlan.map(p => ({
+      type: p.type,
+      minutes: p.minutes,
+    }));
 
     timer.start(phases);
     setPageState('running');
@@ -259,11 +327,33 @@ const TimerPage: React.FC<TimerPageProps> = ({ userMBTI }) => {
     setShowAbortModal(true);
   };
 
-  const handleAbortConfirm = (reason: AbortReason, detail?: string) => {
-    console.log('Session aborted:', reason, detail);
+  const handleAbortConfirm = async (reason: AbortReason, detail?: string) => {
     timer.stop();
+
+    // 경과 시간 계산
+    const elapsedSec = sessionStartTime
+      ? Math.floor((new Date().getTime() - sessionStartTime.getTime()) / 1000)
+      : 0;
+
+    // 백엔드 API 호출
+    if (currentSessionId) {
+      try {
+        await api.abortSession({
+          session_id: currentSessionId,
+          abort_reason: reason as 'phone' | 'tired' | 'bored' | 'anxious' | 'environment' | 'urgent' | 'other',
+          abort_detail: detail,
+          total_focus_sec: elapsedSec,
+          rounds_completed: Math.max(0, timer.currentRound - 1),
+        });
+      } catch (error) {
+        console.error('Failed to abort session:', error);
+      }
+    }
+
     setShowAbortModal(false);
     setPageState('setup');
+    setCurrentSessionId(null);
+    setSessionStartTime(null);
   };
 
   const handleNewSession = () => {
@@ -273,25 +363,25 @@ const TimerPage: React.FC<TimerPageProps> = ({ userMBTI }) => {
   };
 
   // 달성 시간에 따른 축하 메시지
-  const getCompletionMessage = () => {
-    if (!sessionConfig) return '훌륭해요! 오늘도 집중력을 발휘했어요.';
+  const getCompletionMessage = (): { text: string; icon: string } => {
+    if (!sessionConfig) return { text: '훌륭해요! 오늘도 집중력을 발휘했어요.', icon: 'bi-hand-thumbs-up-fill' };
 
     const totalMinutes = sessionConfig.focusMinutes * sessionConfig.rounds;
 
     if (totalMinutes >= 120) {
-      return '대단해요! 2시간 이상 집중하다니, 당신은 집중력 마스터! 🏆';
+      return { text: '대단해요! 2시간 이상 집중하다니, 당신은 집중력 마스터!', icon: 'bi-trophy-fill' };
     } else if (totalMinutes >= 90) {
-      return '와우! 90분 넘게 집중했어요. 프로 집중러 인정! 💪';
+      return { text: '와우! 90분 넘게 집중했어요. 프로 집중러 인정!', icon: 'bi-lightning-charge-fill' };
     } else if (totalMinutes >= 60) {
-      return '1시간 집중 완료! 오늘 정말 열심히 했어요! ⭐';
+      return { text: '1시간 집중 완료! 오늘 정말 열심히 했어요!', icon: 'bi-star-fill' };
     } else if (totalMinutes >= 45) {
-      return '45분 집중 성공! 꾸준히 하면 습관이 돼요! 🌟';
+      return { text: '45분 집중 성공! 꾸준히 하면 습관이 돼요!', icon: 'bi-stars' };
     } else if (totalMinutes >= 30) {
-      return '30분 완주! 작은 성공이 큰 변화를 만들어요! 🎯';
+      return { text: '30분 완주! 작은 성공이 큰 변화를 만들어요!', icon: 'bi-bullseye' };
     } else if (totalMinutes >= 15) {
-      return '15분 집중 성공! 시작이 반이에요! 🚀';
+      return { text: '15분 집중 성공! 시작이 반이에요!', icon: 'bi-rocket-takeoff-fill' };
     } else {
-      return '짧지만 해냈어요! 내일은 조금 더 도전해볼까요? 💫';
+      return { text: '짧지만 해냈어요! 내일은 조금 더 도전해볼까요?', icon: 'bi-brightness-high-fill' };
     }
   };
 
@@ -310,7 +400,7 @@ const TimerPage: React.FC<TimerPageProps> = ({ userMBTI }) => {
               </button>
             )}
             <button className="header-btn analysis-btn" onClick={() => setShowAnalysisModal(true)} title="AI 분석">
-              <i className="bi bi-cpu-fill"></i>
+              <i className="bi bi-graph-up-arrow"></i>
             </button>
             <button className="header-btn" onClick={() => setShowAchievementsModal(true)}>
               <i className="bi bi-trophy-fill"></i>
@@ -327,8 +417,12 @@ const TimerPage: React.FC<TimerPageProps> = ({ userMBTI }) => {
         <main className="main-content">
           {pageState === 'setup' && (
             <div className="setup-page">
-              <div className="idle-hamster">
-                <Hamster isRunning={true} speed="slow" />
+              <div className="idle-cat">
+                <LevelCat level={userLevel} isRunning={true} size="medium" />
+                <div className="level-badge">
+                  <i className="bi bi-star-fill"></i>
+                  Lv.{userLevel}
+                </div>
               </div>
               <SessionSetup
                 onStart={handleStartSession}
@@ -341,11 +435,15 @@ const TimerPage: React.FC<TimerPageProps> = ({ userMBTI }) => {
           {pageState === 'running' && (
             <div className="running-container">
               <div className="character-section">
-                <Hamster
+                <LevelCat
+                  level={userLevel}
                   isRunning={timer.isRunning && !timer.isPaused}
-                  speed={timer.isPaused ? 'slow' : 'normal'}
+                  size="large"
                 />
-                <StatusText isRunning={timer.currentPhase?.type === 'focus'} />
+                <StatusText
+                  isRunning={timer.currentPhase?.type === 'focus'}
+                  isPaused={timer.isPaused}
+                />
               </div>
 
               <div className="timer-section">
@@ -380,11 +478,11 @@ const TimerPage: React.FC<TimerPageProps> = ({ userMBTI }) => {
           {pageState === 'completed' && (
             <div className="completed-container">
               <div className="celebration">
-                <i className="bi bi-trophy-fill"></i>
+                <i className={`bi ${getCompletionMessage().icon}`}></i>
               </div>
               <h2 className="completed-title">세션 완료!</h2>
               <p className="completed-message">
-                {getCompletionMessage()}
+                {getCompletionMessage().text}
               </p>
 
               <div className="reward-card">
@@ -435,10 +533,11 @@ const TimerPage: React.FC<TimerPageProps> = ({ userMBTI }) => {
                 </button>
               </div>
               <div className="stats-grid">
-                <div className="stat-card">
+                <div className="stat-card coin-card">
                   <i className="bi bi-coin"></i>
                   <div className="stat-value">{stats.totalCoins}</div>
                   <div className="stat-label">보유 코인</div>
+                  <div className="stat-hint">사용처 : 개발중!!</div>
                 </div>
                 <div className="stat-card">
                   <i className="bi bi-clock-history"></i>
@@ -496,48 +595,6 @@ const TimerPage: React.FC<TimerPageProps> = ({ userMBTI }) => {
               <div className="settings-list">
                 <div className="setting-item">
                   <div className="setting-info">
-                    <i className="bi bi-bell"></i>
-                    <span>알림 소리</span>
-                  </div>
-                  <label className="toggle">
-                    <input
-                      type="checkbox"
-                      checked={settings.soundEnabled}
-                      onChange={(e) => updateSetting('soundEnabled', e.target.checked)}
-                    />
-                    <span className="slider"></span>
-                  </label>
-                </div>
-                <div className="setting-item">
-                  <div className="setting-info">
-                    <i className="bi bi-phone-vibrate"></i>
-                    <span>진동</span>
-                  </div>
-                  <label className="toggle">
-                    <input
-                      type="checkbox"
-                      checked={settings.vibrationEnabled}
-                      onChange={(e) => updateSetting('vibrationEnabled', e.target.checked)}
-                    />
-                    <span className="slider"></span>
-                  </label>
-                </div>
-                <div className="setting-item">
-                  <div className="setting-info">
-                    <i className="bi bi-moon-stars"></i>
-                    <span>자동 휴식 알림</span>
-                  </div>
-                  <label className="toggle">
-                    <input
-                      type="checkbox"
-                      checked={settings.autoBreakAlert}
-                      onChange={(e) => updateSetting('autoBreakAlert', e.target.checked)}
-                    />
-                    <span className="slider"></span>
-                  </label>
-                </div>
-                <div className="setting-item">
-                  <div className="setting-info">
                     <i className="bi bi-lightbulb"></i>
                     <span>AI 추천 사용</span>
                   </div>
@@ -546,6 +603,36 @@ const TimerPage: React.FC<TimerPageProps> = ({ userMBTI }) => {
                       type="checkbox"
                       checked={settings.aiRecommendation}
                       onChange={(e) => updateSetting('aiRecommendation', e.target.checked)}
+                    />
+                    <span className="slider"></span>
+                  </label>
+                </div>
+                <div className="setting-item disabled">
+                  <div className="setting-info">
+                    <i className="bi bi-bell"></i>
+                    <span>알림 소리</span>
+                    <span className="coming-soon">준비 중</span>
+                  </div>
+                  <label className="toggle">
+                    <input
+                      type="checkbox"
+                      checked={false}
+                      disabled
+                    />
+                    <span className="slider"></span>
+                  </label>
+                </div>
+                <div className="setting-item disabled">
+                  <div className="setting-info">
+                    <i className="bi bi-moon-stars"></i>
+                    <span>자동 휴식 알림</span>
+                    <span className="coming-soon">준비 중</span>
+                  </div>
+                  <label className="toggle">
+                    <input
+                      type="checkbox"
+                      checked={false}
+                      disabled
                     />
                     <span className="slider"></span>
                   </label>
@@ -622,52 +709,60 @@ const TimerPage: React.FC<TimerPageProps> = ({ userMBTI }) => {
                   <i className="bi bi-x-lg"></i>
                 </button>
               </div>
-              <div className="achievements-summary">
-                <div className="summary-stat">
-                  <span className="count">{achievements.filter(a => a.unlocked).length}</span>
-                  <span className="label">획득</span>
+              {achievementsLoading ? (
+                <div className="loading-container">
+                  <Loader />
                 </div>
-                <div className="summary-divider"></div>
-                <div className="summary-stat">
-                  <span className="count">{achievements.length}</span>
-                  <span className="label">전체</span>
-                </div>
-                <div className="summary-divider"></div>
-                <div className="summary-stat">
-                  <span className="count">{achievements.filter(a => a.unlocked).reduce((sum, a) => sum + a.coinReward, 0)}</span>
-                  <span className="label">코인</span>
-                </div>
-              </div>
-              <div className="achievements-list">
-                {achievements.map((ach) => (
-                  <div key={ach.id} className={`achievement-item ${ach.unlocked ? 'unlocked' : 'locked'} ${ach.rarity}`}>
-                    <div className={`achievement-icon ${ach.unlocked ? '' : 'locked'}`}>
-                      <i className={`bi ${ach.icon}`}></i>
+              ) : (
+                <>
+                  <div className="achievements-summary">
+                    <div className="summary-stat">
+                      <span className="count">{achievements.filter(a => a.unlocked).length}</span>
+                      <span className="label">획득</span>
                     </div>
-                    <div className="achievement-info">
-                      <div className="achievement-header">
-                        <span className="achievement-name">{ach.name}</span>
-                        <span className={`rarity-badge ${ach.rarity}`}>
-                          {ach.rarity === 'common' ? '일반' :
-                           ach.rarity === 'uncommon' ? '희귀' :
-                           ach.rarity === 'rare' ? '레어' :
-                           ach.rarity === 'epic' ? '에픽' : '전설'}
-                        </span>
-                      </div>
-                      <span className="achievement-desc">{ach.description}</span>
-                      {!ach.unlocked && ach.progress !== undefined && (
-                        <div className="progress-bar">
-                          <div className="progress-fill" style={{ width: `${ach.progress * 100}%` }}></div>
-                        </div>
-                      )}
+                    <div className="summary-divider"></div>
+                    <div className="summary-stat">
+                      <span className="count">{achievements.length}</span>
+                      <span className="label">전체</span>
                     </div>
-                    <div className="achievement-reward">
-                      <i className="bi bi-coin"></i>
-                      <span>{ach.coinReward}</span>
+                    <div className="summary-divider"></div>
+                    <div className="summary-stat">
+                      <span className="count">{achievements.filter(a => a.unlocked).reduce((sum, a) => sum + a.coin_reward, 0)}</span>
+                      <span className="label">코인</span>
                     </div>
                   </div>
-                ))}
-              </div>
+                  <div className="achievements-list">
+                    {achievements.map((ach) => (
+                      <div key={ach.id} className={`achievement-item ${ach.unlocked ? 'unlocked' : 'locked'} ${ach.rarity}`}>
+                        <div className={`achievement-icon ${ach.unlocked ? '' : 'locked'}`}>
+                          <i className={`bi ${ach.icon}`}></i>
+                        </div>
+                        <div className="achievement-info">
+                          <div className="achievement-header">
+                            <span className="achievement-name">{ach.name}</span>
+                            <span className={`rarity-badge ${ach.rarity}`}>
+                              {ach.rarity === 'common' ? '일반' :
+                               ach.rarity === 'uncommon' ? '희귀' :
+                               ach.rarity === 'rare' ? '레어' :
+                               ach.rarity === 'epic' ? '에픽' : '전설'}
+                            </span>
+                          </div>
+                          <span className="achievement-desc">{ach.description}</span>
+                          {!ach.unlocked && ach.progress !== undefined && (
+                            <div className="progress-bar">
+                              <div className="progress-fill" style={{ width: `${ach.progress * 100}%` }}></div>
+                            </div>
+                          )}
+                        </div>
+                        <div className="achievement-reward">
+                          <i className="bi bi-coin"></i>
+                          <span>{ach.coin_reward}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
           </div>
         )}
@@ -677,7 +772,7 @@ const TimerPage: React.FC<TimerPageProps> = ({ userMBTI }) => {
           <div className="modal-overlay" onClick={() => setShowAnalysisModal(false)}>
             <div className="modal-content analysis-modal" onClick={(e) => e.stopPropagation()}>
               <div className="modal-header">
-                <h3><i className="bi bi-cpu-fill"></i> AI 분석 대시보드</h3>
+                <h3><i className="bi bi-graph-up-arrow"></i> AI 분석 대시보드</h3>
                 <button className="close-btn" onClick={() => setShowAnalysisModal(false)}>
                   <i className="bi bi-x-lg"></i>
                 </button>
@@ -792,9 +887,28 @@ const StyledWrapper = styled.div`
     max-width: 500px;
   }
 
-  .idle-hamster {
+  .idle-cat {
     display: flex;
-    justify-content: center;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .level-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: linear-gradient(135deg, #F6AD55 0%, #ED8936 100%);
+    color: #FFFFFF;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 700;
+    box-shadow: 0 4px 12px rgba(246, 173, 85, 0.3);
+
+    i {
+      font-size: 14px;
+    }
   }
 
   /* Running 상태 */
@@ -1045,6 +1159,21 @@ const StyledWrapper = styled.div`
       color: #718096;
       margin-top: 4px;
     }
+
+    .stat-hint {
+      font-size: 10px;
+      color: #A0AEC0;
+      margin-top: 6px;
+    }
+
+    &.coin-card {
+      background: linear-gradient(135deg, #FFFAF0 0%, #FFF5EB 100%);
+      border: 1px solid #F6AD55;
+
+      i {
+        color: #F6AD55;
+      }
+    }
   }
 
   .weekly-chart {
@@ -1133,6 +1262,12 @@ const StyledWrapper = styled.div`
     padding: 12px 16px;
     background: #FAFBFF;
     border-radius: 12px;
+    transition: all 0.2s;
+
+    &.disabled {
+      opacity: 0.6;
+      background: #F7FAFC;
+    }
   }
 
   .setting-info {
@@ -1146,6 +1281,15 @@ const StyledWrapper = styled.div`
       font-size: 18px;
       color: #6C63FF;
     }
+  }
+
+  .coming-soon {
+    font-size: 10px;
+    background: #E2E8F0;
+    color: #718096;
+    padding: 2px 8px;
+    border-radius: 8px;
+    font-weight: 600;
   }
 
   .toggle {
@@ -1551,7 +1695,7 @@ const StyledWrapper = styled.div`
       gap: 24px;
     }
 
-    .idle-hamster {
+    .idle-cat {
       transform: scale(0.85);
     }
 
@@ -1561,19 +1705,32 @@ const StyledWrapper = styled.div`
     }
   }
 
+  /* Loading Container */
+  .loading-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    min-height: 120px;
+  }
+
   /* Analysis Modal */
   .analysis-modal {
     max-width: 500px;
     max-height: 85vh;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
+    padding-bottom: 0;
   }
 
   .analysis-modal-body {
     flex: 1;
     overflow-y: auto;
-    margin: 0 -28px -28px -28px;
-    padding: 0;
+    overflow-x: hidden;
+    margin: 0 -28px 0 -28px;
+    padding: 0 28px 28px 28px;
+    border-radius: 0 0 24px 24px;
 
     &::-webkit-scrollbar {
       width: 6px;

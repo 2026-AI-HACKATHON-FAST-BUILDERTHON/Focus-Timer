@@ -1,5 +1,5 @@
 """
-AI 추천 API 라우터 (고도화 버전)
+AI 추천 API 라우터 (고도화 버전) - Supabase DB 연동
 - XGBoost 기반 예측
 - Multi-Armed Bandit 최적화
 - 골든타임 분석
@@ -17,9 +17,31 @@ from services.advanced_recommender import (
     AdvancedAIRecommender,
 )
 from routers.auth import get_current_user
-from routers.sessions import sessions_db
+from database.connection import get_cursor
 
 router = APIRouter(prefix="/recommendation", tags=["Recommendation"])
+
+
+def get_user_recent_sessions(user_id: str, limit: int = 20) -> list:
+    """DB에서 사용자의 최근 세션 조회"""
+    with get_cursor() as cur:
+        cur.execute(
+            """
+            SELECT id, user_id, task_type, difficulty, goal, status,
+                   total_focus_sec, total_break_sec, rounds_completed,
+                   coin_reward, start_hour, day_of_week, abort_reason,
+                   planned_focus_min, planned_break_min, planned_rounds,
+                   created_at, completed_at
+            FROM sessions
+            WHERE user_id = %s AND status IN ('completed', 'aborted')
+            ORDER BY created_at DESC
+            LIMIT %s
+            """,
+            (user_id, limit)
+        )
+        sessions = cur.fetchall()
+
+    return [dict(s) for s in sessions]
 
 
 @router.post("", response_model=RecommendationResponse)
@@ -34,13 +56,8 @@ async def get_recommendation(
     - Thompson Sampling으로 최적 전략 선택
     - 페르소나 기반 개인화
     """
-    # 최근 세션 가져오기 (최대 20개)
-    user_sessions = [
-        s for s in sessions_db.values()
-        if s["user_id"] == user["user_id"] and s["status"] is not None
-    ]
-    user_sessions.sort(key=lambda x: x["created_at"], reverse=True)
-    recent_sessions = user_sessions[:20]
+    user_id = str(user["id"])
+    recent_sessions = get_user_recent_sessions(user_id, 20)
 
     # 고도화된 AI 추천 엔진 사용
     recommender = get_advanced_recommender()
@@ -63,14 +80,8 @@ async def get_quick_recommendation(
     빠른 추천 (현재 시간 기준)
     """
     now = datetime.now()
-
-    # 최근 세션 가져오기
-    user_sessions = [
-        s for s in sessions_db.values()
-        if s["user_id"] == user["user_id"] and s["status"] is not None
-    ]
-    user_sessions.sort(key=lambda x: x["created_at"], reverse=True)
-    recent_sessions = user_sessions[:20]
+    user_id = str(user["id"])
+    recent_sessions = get_user_recent_sessions(user_id, 20)
 
     # 고도화된 AI 추천 엔진 사용
     recommender = get_advanced_recommender()
@@ -136,6 +147,7 @@ async def submit_feedback(
 
     세션 완료 후 호출하여 추천 시스템 개선
     """
+    user_id = str(user["id"])
     recommender = get_advanced_recommender()
     recommender.update_mab(focus_minutes, break_minutes, rounds, completed)
 
@@ -143,8 +155,14 @@ async def submit_feedback(
     now = datetime.now()
     recommender.golden_time.update(now.hour, now.weekday(), completed)
 
-    # 적응형 난이도 업데이트
-    session = sessions_db.get(session_id)
+    # 적응형 난이도 업데이트 - DB에서 세션 조회
+    with get_cursor() as cur:
+        cur.execute(
+            "SELECT difficulty FROM sessions WHERE id = %s AND user_id = %s",
+            (session_id, user_id)
+        )
+        session = cur.fetchone()
+
     if session:
         difficulty = session.get("difficulty", 3)
         recommender.adaptive_difficulty.update(difficulty, completed)
@@ -163,11 +181,8 @@ async def get_golden_time(
     """
     사용자의 골든타임 분석
     """
-    # 사용자 세션에서 골든타임 분석
-    user_sessions = [
-        s for s in sessions_db.values()
-        if s["user_id"] == user["user_id"] and s["status"] is not None
-    ]
+    user_id = str(user["id"])
+    user_sessions = get_user_recent_sessions(user_id, 100)
 
     if not user_sessions:
         return {
@@ -189,9 +204,9 @@ async def get_golden_time(
     return analyzer.get_analysis()
 
 
-@router.get("/persona/{user_id}")
+@router.get("/persona/{target_user_id}")
 async def get_user_persona(
-    user_id: str,
+    target_user_id: str,
     user: dict = Depends(get_current_user),
 ):
     """
@@ -200,10 +215,7 @@ async def get_user_persona(
     - 최근 세션 데이터 기반
     - 8가지 페르소나 중 분류
     """
-    user_sessions = [
-        s for s in sessions_db.values()
-        if s["user_id"] == user_id and s["status"] is not None
-    ]
+    user_sessions = get_user_recent_sessions(target_user_id, 20)
 
     if not user_sessions:
         return {
@@ -213,22 +225,19 @@ async def get_user_persona(
             "confidence": 0.0,
         }
 
-    user_sessions.sort(key=lambda x: x["created_at"], reverse=True)
-    recent_sessions = user_sessions[:20]
-
     # 분석
-    completion_rate = sum(1 for s in recent_sessions if s.get("status") == "completed") / len(recent_sessions)
-    focus_times = [s.get("total_focus_sec", 0) / 60 for s in recent_sessions]
+    completion_rate = sum(1 for s in user_sessions if s.get("status") == "completed") / len(user_sessions)
+    focus_times = [s.get("total_focus_sec", 0) / 60 for s in user_sessions]
     avg_focus = sum(focus_times) / len(focus_times) if focus_times else 25
 
     abort_counts = {}
-    for s in recent_sessions:
+    for s in user_sessions:
         reason = s.get("abort_reason")
         if reason:
             abort_counts[reason] = abort_counts.get(reason, 0) + 1
     top_abort = max(abort_counts, key=abort_counts.get) if abort_counts else "phone"
 
-    active_hours = [s.get("start_hour", 12) for s in recent_sessions]
+    active_hours = [s.get("start_hour", 12) for s in user_sessions]
 
     from data.personas import classify_user_persona, get_persona_profile
 
@@ -244,7 +253,7 @@ async def get_user_persona(
         "completion_rate": round(completion_rate, 2),
         "avg_focus_minutes": round(avg_focus, 1),
         "top_abort_reason": top_abort,
-        "confidence": min(1.0, len(recent_sessions) / 20),
+        "confidence": min(1.0, len(user_sessions) / 20),
         "tips": profile.get("tips", []),
     }
 
@@ -259,17 +268,14 @@ async def get_adaptive_difficulty(
     적응형 난이도 추천
     """
     now = datetime.now()
+    user_id = str(user["id"])
 
     # 사용자 완주율
-    user_sessions = [
-        s for s in sessions_db.values()
-        if s["user_id"] == user["user_id"] and s["status"] is not None
-    ]
+    user_sessions = get_user_recent_sessions(user_id, 20)
 
     completion_rate = 0.7
     if user_sessions:
-        recent = user_sessions[-20:]
-        completion_rate = sum(1 for s in recent if s.get("status") == "completed") / len(recent)
+        completion_rate = sum(1 for s in user_sessions if s.get("status") == "completed") / len(user_sessions)
 
     from services.advanced_recommender import AdaptiveDifficultySystem
 

@@ -1,11 +1,12 @@
 """
-MBTI 및 학습 성향 설문 API
+MBTI 및 학습 성향 설문 API - Supabase DB 연동
 """
 
 from fastapi import APIRouter, Depends, HTTPException
 from typing import Dict, List, Optional
 from pydantic import BaseModel
 from datetime import datetime
+import json
 
 from data.mbti_profiles import (
     SURVEY_QUESTIONS,
@@ -15,11 +16,9 @@ from data.mbti_profiles import (
     calculate_optimal_settings,
 )
 from routers.auth import get_current_user
+from database.connection import get_cursor
 
 router = APIRouter(prefix="/survey", tags=["Survey"])
-
-# In-memory 저장소 (실제로는 DB 사용)
-user_survey_db: Dict[str, Dict] = {}
 
 
 class SurveyAnswers(BaseModel):
@@ -52,7 +51,7 @@ async def submit_survey(
     """
     설문 제출 및 MBTI 분석
     """
-    user_id = user["user_id"]
+    user_id = str(user["id"])
 
     # MBTI 계산
     mbti_type = calculate_mbti_from_survey(survey.answers)
@@ -66,19 +65,37 @@ async def submit_survey(
     # 최적 설정 계산
     optimal_settings = calculate_optimal_settings(mbti_type)
 
-    # 저장
-    now = datetime.now().isoformat()
-    user_survey_db[user_id] = {
-        "mbti_type": mbti_type,
-        "answers": survey.answers,
-        "completed_at": now,
-    }
+    # DB에 저장
+    now = datetime.now()
+    with get_cursor() as cur:
+        # 사용자 MBTI 업데이트
+        cur.execute(
+            """
+            UPDATE users SET mbti_type = %s WHERE id = %s
+            """,
+            (mbti_type, user_id)
+        )
+
+        # 설문 답변 저장 (기존 삭제 후 새로 저장)
+        cur.execute(
+            "DELETE FROM user_survey_answers WHERE user_id = %s",
+            (user_id,)
+        )
+
+        for question_id, answer in survey.answers.items():
+            cur.execute(
+                """
+                INSERT INTO user_survey_answers (user_id, question_id, answer)
+                VALUES (%s, %s, %s)
+                """,
+                (user_id, question_id, answer)
+            )
 
     return SurveyResult(
         mbti_type=mbti_type,
         profile=profile,
         optimal_settings=optimal_settings,
-        completed_at=now,
+        completed_at=now.isoformat(),
     )
 
 
@@ -89,16 +106,38 @@ async def get_survey_result(
     """
     저장된 설문 결과 조회
     """
-    user_id = user["user_id"]
+    user_id = str(user["id"])
 
-    if user_id not in user_survey_db:
-        return {
-            "has_result": False,
-            "message": "설문을 완료해주세요",
-        }
+    with get_cursor() as cur:
+        # 사용자 MBTI 조회
+        cur.execute(
+            "SELECT mbti_type FROM users WHERE id = %s",
+            (user_id,)
+        )
+        user_data = cur.fetchone()
 
-    data = user_survey_db[user_id]
-    mbti_type = data["mbti_type"]
+        if not user_data or not user_data["mbti_type"]:
+            return {
+                "has_result": False,
+                "message": "설문을 완료해주세요",
+            }
+
+        mbti_type = user_data["mbti_type"]
+
+        # 설문 답변 조회
+        cur.execute(
+            """
+            SELECT question_id, answer, created_at
+            FROM user_survey_answers
+            WHERE user_id = %s
+            ORDER BY created_at DESC
+            LIMIT 1
+            """,
+            (user_id,)
+        )
+        answer_row = cur.fetchone()
+        completed_at = answer_row["created_at"].isoformat() if answer_row else None
+
     profile = get_combined_profile(mbti_type)
     optimal_settings = calculate_optimal_settings(mbti_type)
 
@@ -107,7 +146,7 @@ async def get_survey_result(
         "mbti_type": mbti_type,
         "profile": profile,
         "optimal_settings": optimal_settings,
-        "completed_at": data["completed_at"],
+        "completed_at": completed_at,
     }
 
 
@@ -138,10 +177,20 @@ async def reset_survey(
     """
     설문 결과 초기화 (재설문 위해)
     """
-    user_id = user["user_id"]
+    user_id = str(user["id"])
 
-    if user_id in user_survey_db:
-        del user_survey_db[user_id]
+    with get_cursor() as cur:
+        # 사용자 MBTI 초기화
+        cur.execute(
+            "UPDATE users SET mbti_type = NULL WHERE id = %s",
+            (user_id,)
+        )
+
+        # 설문 답변 삭제
+        cur.execute(
+            "DELETE FROM user_survey_answers WHERE user_id = %s",
+            (user_id,)
+        )
 
     return {
         "status": "success",

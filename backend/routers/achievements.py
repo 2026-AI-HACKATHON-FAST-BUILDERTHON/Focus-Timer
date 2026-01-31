@@ -1,5 +1,5 @@
 """
-도전 과제 API 라우터
+도전 과제 API 라우터 - Supabase DB 연동
 - 55개 도전 과제 시스템
 - 진행률 추적
 - 획득 기록
@@ -17,13 +17,9 @@ from services.achievements import (
     ACHIEVEMENTS,
 )
 from routers.auth import get_current_user
-from routers.sessions import sessions_db
+from database.connection import get_cursor
 
 router = APIRouter(prefix="/achievements", tags=["Achievements"])
-
-# In-memory 저장소 (실제로는 DB 사용)
-user_achievements_db: Dict[str, Dict] = {}  # user_id -> {achievement_id: unlocked_at}
-user_stats_db: Dict[str, Dict] = {}  # user_id -> stats
 
 
 class AchievementResponse(BaseModel):
@@ -63,12 +59,43 @@ class AchievementSummaryResponse(BaseModel):
     rarity_distribution: Dict[str, Dict[str, int]]
 
 
+def get_user_sessions(user_id: str) -> List[Dict]:
+    """DB에서 사용자 세션 조회"""
+    with get_cursor() as cur:
+        cur.execute(
+            """
+            SELECT id, user_id, task_type, difficulty, goal, status,
+                   total_focus_sec, total_break_sec, rounds_completed,
+                   coin_reward, start_hour, day_of_week, abort_reason,
+                   created_at, completed_at
+            FROM sessions
+            WHERE user_id = %s AND status IN ('completed', 'aborted')
+            ORDER BY created_at DESC
+            """,
+            (user_id,)
+        )
+        return [dict(s) for s in cur.fetchall()]
+
+
+def get_user_unlocked_achievements(user_id: str) -> Dict[str, str]:
+    """DB에서 사용자가 획득한 도전 과제 조회"""
+    with get_cursor() as cur:
+        cur.execute(
+            """
+            SELECT achievement_id, unlocked_at
+            FROM user_achievements
+            WHERE user_id = %s
+            """,
+            (user_id,)
+        )
+        results = cur.fetchall()
+
+    return {r["achievement_id"]: r["unlocked_at"].isoformat() if r["unlocked_at"] else None for r in results}
+
+
 def get_user_stats(user_id: str) -> Dict:
     """사용자 통계 계산"""
-    user_sessions = [
-        s for s in sessions_db.values()
-        if s.get("user_id") == user_id
-    ]
+    user_sessions = get_user_sessions(user_id)
 
     if not user_sessions:
         return {
@@ -89,6 +116,7 @@ def get_user_stats(user_id: str) -> Dict:
             "consecutive_completions": 0,
             "micro_routines_completed": 0,
             "ai_recommendations_followed": 0,
+            "unlocked_achievements": 0,
         }
 
     completed = [s for s in user_sessions if s.get("status") == "completed"]
@@ -111,18 +139,22 @@ def get_user_stats(user_id: str) -> Dict:
     night = sum(1 for s in completed if 22 <= s.get("start_hour", 12) <= 23)
     midnight = sum(1 for s in completed if 0 <= s.get("start_hour", 12) < 3)
 
-    # 주말 세션
-    weekend = sum(1 for s in completed if s.get("is_weekend", False))
+    # 주말 세션 (day_of_week: 5=토, 6=일)
+    weekend = sum(1 for s in completed if s.get("day_of_week", 0) in [5, 6])
 
     # 가장 긴 집중 세션
     longest = max((s.get("total_focus_sec", 0) for s in completed), default=0) / 60
 
-    # 연속 완료 (streak 계산은 날짜 기반으로 해야 함)
-    streak = 0
-    if completed:
-        sorted_sessions = sorted(completed, key=lambda x: x.get("created_at", ""), reverse=True)
-        # 간단한 streak 계산 (실제로는 날짜 비교 필요)
-        streak = min(len(sorted_sessions), 30)
+    # 사용자 코인 조회
+    with get_cursor() as cur:
+        cur.execute("SELECT coin_balance, current_streak_days FROM users WHERE id = %s", (user_id,))
+        user_info = cur.fetchone()
+
+    total_coins = user_info["coin_balance"] if user_info else 0
+    streak = user_info["current_streak_days"] if user_info else 0
+
+    # 획득한 도전 과제 수
+    unlocked_count = len(get_user_unlocked_achievements(user_id))
 
     return {
         "total_sessions": len(user_sessions),
@@ -130,19 +162,19 @@ def get_user_stats(user_id: str) -> Dict:
         "total_focus_minutes": total_focus,
         "current_streak": streak,
         "max_streak": streak,
-        "total_coins": user_stats_db.get(user_id, {}).get("total_coins", 0),
+        "total_coins": total_coins,
         "sessions_by_task": sessions_by_task,
         "sessions_by_hour": sessions_by_hour,
         "longest_focus_session": longest,
-        "perfect_days": 0,  # 계산 필요
+        "perfect_days": 0,
         "weekend_sessions": weekend,
         "early_morning_sessions": early_morning,
         "night_sessions": night,
         "midnight_sessions": midnight,
-        "consecutive_completions": 0,  # 계산 필요
+        "consecutive_completions": 0,
         "micro_routines_completed": 0,
         "ai_recommendations_followed": 0,
-        "unlocked_achievements": len(user_achievements_db.get(user_id, {})),
+        "unlocked_achievements": unlocked_count,
     }
 
 
@@ -158,14 +190,14 @@ async def get_achievements(
     - category: 카테고리 필터 (focus, streak, time, milestone, special, hidden)
     - show_hidden: 숨겨진 도전 과제 표시 여부
     """
-    user_id = user["user_id"]
-    user_unlocked = user_achievements_db.get(user_id, {})
+    user_id = str(user["id"])
+    user_unlocked = get_user_unlocked_achievements(user_id)
     user_stats = get_user_stats(user_id)
 
     achievements = []
     total_coins = 0
 
-    for ach in ACHIEVEMENTS:
+    for ach in ACHIEVEMENTS.values():
         # 카테고리 필터
         if category and ach.category.value != category:
             continue
@@ -212,13 +244,13 @@ async def get_achievement_summary(
     """
     도전 과제 요약 통계
     """
-    user_id = user["user_id"]
-    user_unlocked = user_achievements_db.get(user_id, {})
+    user_id = str(user["id"])
+    user_unlocked = get_user_unlocked_achievements(user_id)
 
     # 카테고리별 통계
     categories = []
     for cat in AchievementCategory:
-        cat_achievements = [a for a in ACHIEVEMENTS if a.category == cat]
+        cat_achievements = [a for a in ACHIEVEMENTS.values() if a.category == cat]
         cat_unlocked = [a for a in cat_achievements if a.id in user_unlocked]
 
         categories.append(CategoryStatsResponse(
@@ -231,7 +263,7 @@ async def get_achievement_summary(
     # 희귀도별 분포
     rarity_dist = {}
     for rarity in AchievementRarity:
-        rarity_achievements = [a for a in ACHIEVEMENTS if a.rarity == rarity]
+        rarity_achievements = [a for a in ACHIEVEMENTS.values() if a.rarity == rarity]
         rarity_unlocked = [a for a in rarity_achievements if a.id in user_unlocked]
         rarity_dist[rarity.value] = {
             "total": len(rarity_achievements),
@@ -241,13 +273,13 @@ async def get_achievement_summary(
     # 최근 획득
     recent = sorted(
         [(ach_id, time) for ach_id, time in user_unlocked.items()],
-        key=lambda x: x[1],
+        key=lambda x: x[1] if x[1] else "",
         reverse=True
     )[:5]
 
     recent_unlocks = []
     for ach_id, unlocked_at in recent:
-        ach = next((a for a in ACHIEVEMENTS if a.id == ach_id), None)
+        ach = next((a for a in ACHIEVEMENTS.values() if a.id == ach_id), None)
         if ach:
             recent_unlocks.append(AchievementResponse(
                 id=ach.id,
@@ -263,7 +295,7 @@ async def get_achievement_summary(
 
     # 총 코인
     total_coins = sum(
-        next((a.coin_reward for a in ACHIEVEMENTS if a.id == ach_id), 0)
+        next((a.coin_reward for a in ACHIEVEMENTS.values() if a.id == ach_id), 0)
         for ach_id in user_unlocked
     )
 
@@ -286,12 +318,12 @@ async def get_achievement(
     """
     특정 도전 과제 상세 조회
     """
-    ach = next((a for a in ACHIEVEMENTS if a.id == achievement_id), None)
+    ach = next((a for a in ACHIEVEMENTS.values() if a.id == achievement_id), None)
     if not ach:
         raise HTTPException(status_code=404, detail="Achievement not found")
 
-    user_id = user["user_id"]
-    user_unlocked = user_achievements_db.get(user_id, {})
+    user_id = str(user["id"])
+    user_unlocked = get_user_unlocked_achievements(user_id)
     user_stats = get_user_stats(user_id)
 
     unlocked = ach.id in user_unlocked
@@ -319,21 +351,18 @@ async def check_achievements(
 
     세션 완료 후 호출하여 새로 달성한 과제를 확인
     """
-    user_id = user["user_id"]
+    user_id = str(user["id"])
     user_stats = get_user_stats(user_id)
+    user_sessions = get_user_sessions(user_id)
 
     # 최근 세션
-    user_sessions = [
-        s for s in sessions_db.values()
-        if s.get("user_id") == user_id
-    ]
-    latest_session = max(user_sessions, key=lambda x: x.get("created_at", "")) if user_sessions else None
+    latest_session = user_sessions[0] if user_sessions else None
 
     # 도전 과제 매니저
     manager = AchievementManager()
 
     # 이미 획득한 도전 과제
-    existing = set(user_achievements_db.get(user_id, {}).keys())
+    existing = set(get_user_unlocked_achievements(user_id).keys())
     manager.user_achievements = existing.copy()
 
     # 새 도전 과제 확인
@@ -343,20 +372,31 @@ async def check_achievements(
         user_stats=user_stats,
     )
 
-    # 새로 획득한 도전 과제 저장
+    # 새로 획득한 도전 과제 DB에 저장
     if new_achievements:
-        if user_id not in user_achievements_db:
-            user_achievements_db[user_id] = {}
+        now = datetime.now()
+        with get_cursor() as cur:
+            for ach in new_achievements:
+                cur.execute(
+                    """
+                    INSERT INTO user_achievements (user_id, achievement_id, unlocked_at)
+                    VALUES (%s, %s, %s)
+                    ON CONFLICT (user_id, achievement_id) DO NOTHING
+                    """,
+                    (user_id, ach.id, now)
+                )
 
-        now = datetime.now().isoformat()
-        for ach in new_achievements:
-            user_achievements_db[user_id][ach.id] = now
-
-        # 코인 추가
-        coins_earned = sum(a.coin_reward for a in new_achievements)
-        if user_id not in user_stats_db:
-            user_stats_db[user_id] = {"total_coins": 0}
-        user_stats_db[user_id]["total_coins"] += coins_earned
+            # 코인 추가
+            coins_earned = sum(a.coin_reward for a in new_achievements)
+            cur.execute(
+                """
+                UPDATE users SET
+                    coin_balance = coin_balance + %s,
+                    total_coins_earned = total_coins_earned + %s
+                WHERE id = %s
+                """,
+                (coins_earned, coins_earned, user_id)
+            )
 
     return {
         "new_achievements": [

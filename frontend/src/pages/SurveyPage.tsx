@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
+import * as api from '../services/api';
+import Loader from '../components/common/Loader';
 
 interface SurveyOption {
   value: string;
@@ -136,8 +138,28 @@ const SurveyPage: React.FC<SurveyPageProps> = ({ onComplete }) => {
   const [mode, setMode] = useState<SurveyMode>('choice');
   const [currentStep, setCurrentStep] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
-  const [showResult, setShowResult] = useState(false);
   const [mbtiResult, setMbtiResult] = useState<string>('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // 기존 설문 결과 확인
+  useEffect(() => {
+    const checkExistingSurvey = async () => {
+      try {
+        const result = await api.getSurveyResult();
+        if (result.has_result && result.mbti_type) {
+          // 이미 설문 완료된 경우
+          setMbtiResult(result.mbti_type);
+          localStorage.setItem('userMBTI', result.mbti_type);
+          localStorage.setItem('mbtiSurveyCompleted', 'true');
+          setMode('result');
+        }
+      } catch (error) {
+        console.error('Failed to check survey result:', error);
+      }
+    };
+
+    checkExistingSurvey();
+  }, []);
 
   const handleAnswer = (questionId: string, value: string) => {
     const newAnswers = { ...answers, [questionId]: value };
@@ -147,12 +169,34 @@ const SurveyPage: React.FC<SurveyPageProps> = ({ onComplete }) => {
     if (currentStep < SURVEY_QUESTIONS.length - 1) {
       setTimeout(() => setCurrentStep(currentStep + 1), 300);
     } else {
-      // 결과 계산
-      calculateMBTI(newAnswers);
+      // 결과 계산 및 서버 제출
+      submitSurvey(newAnswers);
     }
   };
 
-  const calculateMBTI = (finalAnswers: Record<string, string>) => {
+  const submitSurvey = async (finalAnswers: Record<string, string>) => {
+    setIsSubmitting(true);
+    try {
+      // 백엔드 API로 설문 제출
+      const result = await api.submitSurvey(finalAnswers);
+      const mbti = result.mbti_type;
+
+      setMbtiResult(mbti);
+      setMode('result');
+
+      // 로컬 스토리지에도 저장
+      localStorage.setItem('userMBTI', mbti);
+      localStorage.setItem('mbtiSurveyCompleted', 'true');
+    } catch (error) {
+      console.error('Failed to submit survey:', error);
+      // 폴백: 로컬에서 계산
+      calculateMBTILocally(finalAnswers);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const calculateMBTILocally = (finalAnswers: Record<string, string>) => {
     const dimensions: Record<string, number> = {
       E: 0, I: 0, S: 0, N: 0, T: 0, F: 0, J: 0, P: 0
     };
@@ -178,7 +222,28 @@ const SurveyPage: React.FC<SurveyPageProps> = ({ onComplete }) => {
     localStorage.setItem('mbtiSurveyCompleted', 'true');
   };
 
-  const handleDirectSelect = (selectedMbti: string) => {
+  const handleDirectSelect = async (selectedMbti: string) => {
+    setIsSubmitting(true);
+    try {
+      // 직접 선택 시에도 서버에 저장 (가상의 답변으로)
+      // 실제로는 MBTI 유형에 맞는 답변을 역으로 생성
+      const mockAnswers: Record<string, string> = {};
+      SURVEY_QUESTIONS.forEach((q) => {
+        const mbtiChar = selectedMbti[
+          q.dimension === 'EI' ? 0 :
+          q.dimension === 'SN' ? 1 :
+          q.dimension === 'TF' ? 2 : 3
+        ];
+        mockAnswers[q.id] = mbtiChar;
+      });
+
+      await api.submitSurvey(mockAnswers);
+    } catch (error) {
+      console.error('Failed to submit survey:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
+
     setMbtiResult(selectedMbti);
     setMode('result');
 
@@ -323,6 +388,19 @@ const SurveyPage: React.FC<SurveyPageProps> = ({ onComplete }) => {
               이제 집중 시작하기
             </button>
           </div>
+        </div>
+      </StyledWrapper>
+    );
+  }
+
+  // 제출 중 로딩 화면
+  if (isSubmitting) {
+    return (
+      <StyledWrapper>
+        <div className="survey-page loading-page">
+          <Loader />
+          <h2>분석 중...</h2>
+          <p>당신의 학습 성향을 분석하고 있어요</p>
         </div>
       </StyledWrapper>
     );
@@ -791,11 +869,12 @@ const StyledWrapper = styled.div`
         line-height: 1.5;
 
         &::before {
-          content: "✓";
+          content: "\\F26E";
+          font-family: "bootstrap-icons";
           position: absolute;
           left: 0;
           color: #48BB78;
-          font-weight: bold;
+          font-size: 12px;
         }
 
         &:last-child {
@@ -830,6 +909,28 @@ const StyledWrapper = styled.div`
       font-size: 20px;
     }
   }
+
+  /* 로딩 페이지 */
+  .loading-page {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 80vh;
+
+    h2 {
+      margin-top: 24px;
+      font-size: 22px;
+      font-weight: 700;
+      color: #2D3748;
+    }
+
+    p {
+      margin-top: 8px;
+      color: #718096;
+    }
+  }
+
 
   @media (max-width: 768px) {
     .survey-page {

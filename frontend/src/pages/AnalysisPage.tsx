@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import * as api from '../services/api';
+import Loader from '../components/common/Loader';
 
 const AnalysisPage: React.FC = () => {
   const [level, setLevel] = useState<api.LevelInfo | null>(null);
@@ -18,19 +19,14 @@ const AnalysisPage: React.FC = () => {
   const fetchAllData = async () => {
     setLoading(true);
     try {
-      const [levelData, heatmapData, personaData, trendsData, insightsData] = await Promise.all([
-        api.getUserLevel().catch(() => null),
-        api.getGoldenTimeHeatmap().catch(() => null),
-        api.getPersonaAnalysis().catch(() => null),
-        api.getTrendAnalysis(14).catch(() => null),
-        api.getAIInsights().catch(() => null),
-      ]);
+      // 통합 API로 1번 호출 (5개 API → 1개로 최적화)
+      const dashboard = await api.getDashboard();
 
-      setLevel(levelData);
-      setHeatmap(heatmapData);
-      setPersona(personaData);
-      setTrends(trendsData);
-      setInsights(insightsData);
+      setLevel(dashboard.level);
+      setHeatmap(dashboard.heatmap);
+      setPersona(dashboard.persona);
+      setTrends(dashboard.trends);
+      setInsights(dashboard.insights);
     } catch (error) {
       console.error('Failed to fetch analytics:', error);
     } finally {
@@ -87,8 +83,7 @@ const AnalysisPage: React.FC = () => {
   if (loading) {
     return (
       <LoadingWrapper>
-        <div className="spinner"></div>
-        <p>AI가 분석 중입니다...</p>
+        <Loader />
       </LoadingWrapper>
     );
   }
@@ -99,7 +94,7 @@ const AnalysisPage: React.FC = () => {
       {level && (
         <div className="level-card">
           <div className="level-icon">
-            <i className={level.level_icon}></i>
+            <i className="bi bi-clock-fill"></i>
           </div>
           <div className="level-info">
             <div className="level-header">
@@ -394,23 +389,6 @@ const LoadingWrapper = styled.div`
   padding: 60px 20px;
   color: #718096;
 
-  .spinner {
-    width: 40px;
-    height: 40px;
-    border: 3px solid #E2E8F0;
-    border-top-color: #6C63FF;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-    margin-bottom: 16px;
-  }
-
-  p {
-    font-size: 14px;
-  }
-
-  @keyframes spin {
-    to { transform: rotate(360deg); }
-  }
 `;
 
 const StyledWrapper = styled.div`
@@ -635,7 +613,7 @@ const StyledWrapper = styled.div`
   .chart-container {
     background: #FFFFFF;
     border-radius: 10px;
-    padding: 16px;
+    padding: 24px 16px 16px 16px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   }
 
@@ -645,6 +623,7 @@ const StyledWrapper = styled.div`
     align-items: flex-end;
     height: 100px;
     gap: 6px;
+    margin-top: 8px;
   }
 
   .chart-bar-wrapper {

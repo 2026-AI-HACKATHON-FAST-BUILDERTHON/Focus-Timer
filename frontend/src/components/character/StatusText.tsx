@@ -3,6 +3,7 @@ import styled from 'styled-components';
 
 interface StatusTextProps {
   isRunning?: boolean;
+  isPaused?: boolean;
 }
 
 const statusMessages = [
@@ -45,12 +46,17 @@ const idleMessages = [
   '햄스터 응원받는 중...',
 ];
 
-const StatusText: React.FC<StatusTextProps> = ({ isRunning = true }) => {
+const pausedMessage = '일시정지 중...';
+
+const StatusText: React.FC<StatusTextProps> = ({ isRunning = true, isPaused = false }) => {
   const messages = isRunning ? statusMessages : idleMessages;
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
 
   useEffect(() => {
+    // 일시정지 상태면 메시지 순환 중지
+    if (isPaused) return;
+
     const interval = setInterval(() => {
       setIsAnimating(true);
       setTimeout(() => {
@@ -60,30 +66,39 @@ const StatusText: React.FC<StatusTextProps> = ({ isRunning = true }) => {
     }, 2500);
 
     return () => clearInterval(interval);
-  }, [messages.length]);
+  }, [messages.length, isPaused]);
 
   return (
-    <StyledWrapper>
-      <div className="status-card">
+    <StyledWrapper $isPaused={isPaused}>
+      <div className={`status-card ${isPaused ? 'paused' : ''}`}>
         <div className="status-loader">
-          <span className="status-prefix">열심히</span>
+          <span className="status-prefix">{isPaused ? '' : '열심히'}</span>
           <div className="status-words">
-            <span className={`status-word ${isAnimating ? 'slide-out' : 'slide-in'}`}>
-              {messages[currentIndex]}
+            <span className={`status-word ${isAnimating && !isPaused ? 'slide-out' : 'slide-in'}`}>
+              {isPaused ? pausedMessage : messages[currentIndex]}
             </span>
           </div>
+          {isPaused && (
+            <i className="bi bi-pause-circle-fill pause-icon"></i>
+          )}
         </div>
       </div>
     </StyledWrapper>
   );
 };
 
-const StyledWrapper = styled.div`
+const StyledWrapper = styled.div<{ $isPaused: boolean }>`
   .status-card {
     background: #FFFFFF;
     padding: 12px 24px;
     border-radius: 16px;
     box-shadow: 0 4px 16px rgba(108, 99, 255, 0.1);
+    transition: all 0.3s ease;
+
+    &.paused {
+      background: #F7FAFC;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    }
   }
 
   .status-loader {
@@ -113,6 +128,16 @@ const StyledWrapper = styled.div`
     color: #6C63FF;
     font-weight: 600;
     transition: all 0.3s ease;
+  }
+
+  .pause-icon {
+    margin-left: 8px;
+    color: #A0AEC0;
+    font-size: 18px;
+  }
+
+  .status-card.paused .status-word {
+    color: #A0AEC0;
   }
 
   .slide-in {

@@ -135,6 +135,81 @@ export async function submitSessionFeedback(
   });
 }
 
+// ===============================
+// Session API (세션 관리)
+// ===============================
+
+export interface SessionStartRequest {
+  task_type: 'reading' | 'practice' | 'creation' | 'routine';
+  difficulty: number;
+  goal?: string;
+  mode_plan: Array<{ type: 'focus' | 'break'; minutes: number }>;
+}
+
+export interface SessionResponse {
+  id: string;
+  user_id: string;
+  task_type: string;
+  difficulty: number;
+  goal?: string;
+  mode_plan?: Array<{ type: string; minutes: number }>;
+  status: 'completed' | 'aborted';
+  abort_reason?: string;
+  total_focus_sec: number;
+  total_break_sec: number;
+  rounds_completed: number;
+  coin_reward: number;
+  created_at: string;
+}
+
+export async function startSession(request: SessionStartRequest): Promise<SessionResponse> {
+  return apiRequest('/sessions/start', {
+    method: 'POST',
+    body: JSON.stringify(request),
+  });
+}
+
+export interface SessionCompleteRequest {
+  session_id: string;
+  total_focus_sec: number;
+  total_break_sec: number;
+  rounds_completed: number;
+}
+
+export async function completeSession(request: SessionCompleteRequest): Promise<SessionResponse> {
+  return apiRequest('/sessions/complete', {
+    method: 'POST',
+    body: JSON.stringify(request),
+  });
+}
+
+export interface SessionAbortRequest {
+  session_id: string;
+  abort_reason: 'phone' | 'tired' | 'bored' | 'anxious' | 'environment' | 'urgent' | 'other';
+  abort_detail?: string;
+  total_focus_sec: number;
+  rounds_completed: number;
+}
+
+export async function abortSession(request: SessionAbortRequest): Promise<SessionResponse> {
+  return apiRequest('/sessions/abort', {
+    method: 'POST',
+    body: JSON.stringify(request),
+  });
+}
+
+export async function getSessionStats(): Promise<{
+  total_sessions: number;
+  completed_sessions: number;
+  completion_rate: number;
+  total_focus_minutes: number;
+  total_coins: number;
+  sessions_7d: number;
+  completed_7d: number;
+}> {
+  return apiRequest('/sessions/stats');
+}
+
 // 도전과제 API
 export interface Achievement {
   id: string;
@@ -215,11 +290,19 @@ export async function getSurveyResult(): Promise<SurveyResult & { has_result: bo
   return apiRequest('/survey/result');
 }
 
-// 인증 API (데모용)
+// 인증 API
+export interface LoginResponse {
+  access_token: string;
+  token_type: string;
+  user_id: string;
+  email: string;
+  nickname?: string;
+}
+
 export async function demoLogin(
   email: string,
   password: string
-): Promise<{ access_token: string; user: { user_id: string; email: string } }> {
+): Promise<LoginResponse> {
   return apiRequest('/auth/login', {
     method: 'POST',
     body: JSON.stringify({ email, password }),
@@ -230,7 +313,7 @@ export async function demoSignup(
   email: string,
   password: string,
   nickname: string
-): Promise<{ user_id: string; email: string; nickname: string }> {
+): Promise<LoginResponse> {
   return apiRequest('/auth/signup', {
     method: 'POST',
     body: JSON.stringify({ email, password, nickname }),
@@ -337,6 +420,19 @@ export interface LevelInfo {
 
 export async function getUserLevel(): Promise<LevelInfo> {
   return apiRequest<LevelInfo>('/analytics/level');
+}
+
+// 통합 대시보드 API (5개 API를 1번 호출로 최적화)
+export interface DashboardResponse {
+  level: LevelInfo;
+  heatmap: GoldenTimeHeatmapResponse;
+  persona: PersonaAnalysisResponse;
+  trends: TrendAnalysisResponse;
+  insights: AIInsightsResponse;
+}
+
+export async function getDashboard(): Promise<DashboardResponse> {
+  return apiRequest<DashboardResponse>('/analytics/dashboard');
 }
 
 // 주간 리포트

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import styled from 'styled-components';
 import AuthCard from '../components/auth/AuthCard';
+import * as api from '../services/api';
 
 interface LoginPageProps {
   onLoginSuccess: () => void;
@@ -15,10 +16,20 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
     setError(null);
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      const response = await api.demoLogin(email, password);
+
+      // 토큰을 localStorage에 저장
+      localStorage.setItem('authToken', response.access_token);
+      localStorage.setItem('userId', response.user_id);
+      localStorage.setItem('userEmail', response.email);
+      if (response.nickname) {
+        localStorage.setItem('userNickname', response.nickname);
+      }
+
       onLoginSuccess();
-    } catch (err) {
-      setError('로그인에 실패했습니다. 다시 시도해주세요.');
+    } catch (err: any) {
+      console.error('Login error:', err);
+      setError('이메일 또는 비밀번호가 올바르지 않습니다.');
     } finally {
       setIsLoading(false);
     }
@@ -29,10 +40,25 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
     setError(null);
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      // 회원가입 API도 토큰을 반환함
+      const response = await api.demoSignup(email, password, name);
+
+      // 토큰을 localStorage에 저장
+      localStorage.setItem('authToken', response.access_token);
+      localStorage.setItem('userId', response.user_id);
+      localStorage.setItem('userEmail', response.email);
+      if (response.nickname) {
+        localStorage.setItem('userNickname', response.nickname);
+      }
+
       onLoginSuccess();
-    } catch (err) {
-      setError('회원가입에 실패했습니다. 다시 시도해주세요.');
+    } catch (err: any) {
+      console.error('Signup error:', err);
+      if (err.message?.includes('400')) {
+        setError('이미 가입된 이메일입니다.');
+      } else {
+        setError('회원가입에 실패했습니다. 다시 시도해주세요.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -70,6 +96,11 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
             onSignup={handleSignup}
             isLoading={isLoading}
           />
+
+          <div className="demo-hint">
+            <i className="bi bi-info-circle"></i>
+            테스트 계정: test@focustimer.com / test1234
+          </div>
         </main>
 
       </div>
@@ -143,6 +174,21 @@ const StyledWrapper = styled.div`
     padding: 12px 24px;
     border-radius: 10px;
     font-size: 14px;
+  }
+
+  .demo-hint {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #718096;
+    font-size: 13px;
+    background: #F0F4FF;
+    padding: 10px 16px;
+    border-radius: 8px;
+
+    i {
+      color: #6C63FF;
+    }
   }
 
   /* 반응형 */
