@@ -74,7 +74,7 @@ function App() {
             <img
               src="/images/stop.gif"
               alt="로딩"
-              style={{ width: '120px', height: '120px', marginBottom: '16px' }}
+              style={{ width: '240px', height: '240px', marginBottom: '16px', borderRadius: '20px' }}
             />
             <div>사용자 정보를 확인하는 중...</div>
           </div>

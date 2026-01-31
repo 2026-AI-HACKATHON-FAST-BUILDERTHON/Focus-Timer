@@ -389,6 +389,19 @@ const TimerPage: React.FC<TimerPageProps> = ({ userMBTI }) => {
     setEarnedCoins(0);
   };
 
+  // 레벨에 따른 칭호
+  const getLevelTitle = (level: number): string => {
+    if (level >= 50) return '전설의 집중왕';
+    if (level >= 40) return '마스터';
+    if (level >= 30) return '전문가';
+    if (level >= 20) return '숙련자';
+    if (level >= 15) return '중급자';
+    if (level >= 10) return '도전자';
+    if (level >= 5) return '초보자';
+    if (level >= 2) return '새싹';
+    return '입문자';
+  };
+
   // 달성 시간에 따른 축하 메시지
   const getCompletionMessage = (): { text: string; icon: string } => {
     if (!sessionConfig) return { text: '훌륭해요! 오늘도 집중력을 발휘했어요.', icon: 'bi-hand-thumbs-up-fill' };
@@ -459,7 +472,7 @@ const TimerPage: React.FC<TimerPageProps> = ({ userMBTI }) => {
                 <LevelCat level={userLevel} isRunning={true} size="medium" />
                 <div className="level-badge">
                   <i className="bi bi-star-fill"></i>
-                  Lv.{userLevel}
+                  Lv.{userLevel} {getLevelTitle(userLevel)}
                 </div>
               </div>
               <SessionSetup
