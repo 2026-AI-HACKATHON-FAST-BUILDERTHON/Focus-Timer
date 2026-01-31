@@ -22,6 +22,7 @@
 - [핵심 기능](#핵심-기능)
 - [AI 기술 상세](#ai-기술-상세)
 - [시스템 아키텍처](#시스템-아키텍처)
+- [배포 환경](#배포-환경)
 - [설치 및 실행](#설치-및-실행)
 - [API 문서](#api-문서)
 - [기술 스택](#기술-스택)
@@ -781,6 +782,35 @@ flowchart LR
 
 ---
 
+## 배포 환경
+
+### 라이브 데모
+
+| 서비스 | URL |
+|--------|-----|
+| Frontend | https://focus-timer-web.onrender.com |
+| Backend API | https://focus-timer-api.onrender.com |
+| API 문서 | https://focus-timer-api.onrender.com/docs |
+
+### 인프라
+
+| 구성요소 | 플랫폼 | 설명 |
+|---------|--------|------|
+| Frontend | Render (Static Site) | React 빌드 정적 호스팅 |
+| Backend | Render (Web Service) | FastAPI 서버 |
+| Database | Supabase (PostgreSQL) | 클라우드 PostgreSQL |
+
+### 테스트 계정
+
+| 항목 | 값 |
+|------|-----|
+| Email | `test@focustimer.com` |
+| Password | `test1234` |
+| Nickname | 최강록 |
+| 특징 | 만렙 계정 (코인 999,999 / 연속 100일 / 업적 25개 전부 달성) |
+
+---
+
 ## 설치 및 실행
 
 ### 사전 요구사항
@@ -832,6 +862,73 @@ npm start
 ---
 
 ## API 문서
+
+### 인증 API
+
+#### `POST /auth/signup`
+회원가입 (이메일/닉네임 중복 검사 포함)
+
+```json
+// Request
+{
+  "email": "user@example.com",
+  "password": "password123",
+  "nickname": "닉네임"  // 선택사항 (미입력 시 이메일 앞부분 사용)
+}
+
+// Response (성공)
+{
+  "access_token": "eyJhbGciOiJIUzI1NiIs...",
+  "token_type": "bearer",
+  "user_id": "uuid-string",
+  "email": "user@example.com",
+  "nickname": "닉네임"
+}
+
+// Response (이메일 중복)
+{"detail": "이미 가입된 이메일입니다"}
+
+// Response (닉네임 중복)
+{"detail": "이미 사용 중인 닉네임입니다"}
+```
+
+#### `POST /auth/login`
+로그인
+
+```json
+// Request
+{
+  "email": "user@example.com",
+  "password": "password123"
+}
+
+// Response
+{
+  "access_token": "eyJhbGciOiJIUzI1NiIs...",
+  "token_type": "bearer",
+  "user_id": "uuid-string",
+  "email": "user@example.com",
+  "nickname": "닉네임"
+}
+```
+
+#### `GET /auth/me`
+현재 로그인한 사용자 정보 조회
+
+```json
+// Headers
+Authorization: Bearer {access_token}
+
+// Response
+{
+  "user_id": "uuid-string",
+  "email": "user@example.com",
+  "nickname": "닉네임",
+  "coin_balance": 1500,
+  "mbti_type": "INTJ",
+  "current_streak_days": 7
+}
+```
 
 ### 추천 API
 
@@ -931,6 +1028,17 @@ MBTI 설문 질문
 | scikit-learn | 1.3+ | ML 유틸리티 |
 | NumPy | 1.24+ | 수치 연산 |
 | Pydantic | 2.0+ | 데이터 검증 |
+| bcrypt | 4.0+ | 비밀번호 해싱 |
+| python-jose | 3.3+ | JWT 토큰 인증 |
+| psycopg2 | 2.9+ | PostgreSQL 드라이버 |
+
+### 보안
+| 항목 | 구현 |
+|-----|------|
+| 비밀번호 저장 | bcrypt 해싱 (salt 자동 생성) |
+| 인증 | JWT 토큰 (7일 만료) |
+| SQL Injection 방지 | Parameterized Queries (%s 플레이스홀더) |
+| 입력 검증 | Pydantic 모델 + EmailStr 타입 |
 
 ### AI/ML
 | 컴포넌트 | 알고리즘 | 성능 |
