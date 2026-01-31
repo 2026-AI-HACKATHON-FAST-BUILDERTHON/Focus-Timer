@@ -125,10 +125,15 @@ async def signup(request: SignupRequest):
         if cur.fetchone():
             raise HTTPException(status_code=400, detail="이미 가입된 이메일입니다")
 
+        # 닉네임 설정 및 중복 확인
+        nickname = request.nickname or request.email.split("@")[0]
+        cur.execute("SELECT id FROM users WHERE nickname = %s", (nickname,))
+        if cur.fetchone():
+            raise HTTPException(status_code=400, detail="이미 사용 중인 닉네임입니다")
+
         # 새 사용자 생성
         user_id = str(uuid.uuid4())
         password_hash = hash_password(request.password)
-        nickname = request.nickname or request.email.split("@")[0]
 
         cur.execute(
             """
