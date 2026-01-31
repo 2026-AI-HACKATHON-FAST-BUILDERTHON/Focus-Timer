@@ -3,42 +3,48 @@ import { GlobalStyles } from './styles/GlobalStyles';
 import LoginPage from './pages/LoginPage';
 import TimerPage from './pages/TimerPage';
 import SurveyPage from './pages/SurveyPage';
+import { getSurveyResult } from './services/api';
 
-type AppState = 'login' | 'survey' | 'timer';
+type AppState = 'login' | 'survey' | 'timer' | 'loading';
 
 function App() {
   const [appState, setAppState] = useState<AppState>('login');
   const [userMBTI, setUserMBTI] = useState<string | null>(null);
 
-  // 앱 시작 시 저장된 상태 확인
-  useEffect(() => {
-    const authToken = localStorage.getItem('authToken');
-    const surveyCompleted = localStorage.getItem('mbtiSurveyCompleted') === 'true';
-    const savedMBTI = localStorage.getItem('userMBTI');
-
-    if (authToken) {
-      if (surveyCompleted && savedMBTI) {
-        setUserMBTI(savedMBTI);
+  // DB에서 MBTI 확인하는 함수
+  const checkMBTIFromDB = async () => {
+    try {
+      const result = await getSurveyResult();
+      if (result.has_result && result.mbti_type) {
+        setUserMBTI(result.mbti_type);
+        localStorage.setItem('userMBTI', result.mbti_type);
+        localStorage.setItem('mbtiSurveyCompleted', 'true');
         setAppState('timer');
       } else {
         setAppState('survey');
       }
+    } catch (error) {
+      console.error('MBTI 확인 실패:', error);
+      setAppState('survey');
+    }
+  };
+
+  // 앱 시작 시 저장된 상태 확인
+  useEffect(() => {
+    const authToken = localStorage.getItem('authToken');
+
+    if (authToken) {
+      setAppState('loading');
+      checkMBTIFromDB();
     }
   }, []);
 
-  const handleLoginSuccess = () => {
+  const handleLoginSuccess = async () => {
     localStorage.setItem('isLoggedIn', 'true');
+    setAppState('loading');
 
-    // 이미 설문을 완료했는지 확인
-    const surveyCompleted = localStorage.getItem('mbtiSurveyCompleted') === 'true';
-    const savedMBTI = localStorage.getItem('userMBTI');
-
-    if (surveyCompleted && savedMBTI) {
-      setUserMBTI(savedMBTI);
-      setAppState('timer');
-    } else {
-      setAppState('survey');
-    }
+    // DB에서 MBTI 확인
+    await checkMBTIFromDB();
   };
 
   const handleSurveyComplete = (mbti: string) => {
@@ -53,6 +59,22 @@ function App() {
       <GlobalStyles />
       {appState === 'login' && (
         <LoginPage onLoginSuccess={handleLoginSuccess} />
+      )}
+      {appState === 'loading' && (
+        <div style={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          height: '100vh',
+          background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)',
+          color: '#fff',
+          fontSize: '18px'
+        }}>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ marginBottom: '16px', fontSize: '48px' }}>🐱</div>
+            <div>사용자 정보를 확인하는 중...</div>
+          </div>
+        </div>
       )}
       {appState === 'survey' && (
         <SurveyPage
