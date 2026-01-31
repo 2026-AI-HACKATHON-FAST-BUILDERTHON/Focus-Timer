@@ -86,6 +86,7 @@ const TimerPage: React.FC<TimerPageProps> = ({ userMBTI }) => {
   const [achievementsLoading, setAchievementsLoading] = useState(false);
   const [earnedCoins, setEarnedCoins] = useState(0);
   const [userLevel, setUserLevel] = useState(1);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
 
   // AI 추천 상태
   const [recommendation, setRecommendation] = useState<{
@@ -447,22 +448,49 @@ const TimerPage: React.FC<TimerPageProps> = ({ userMBTI }) => {
                 <span className="mbti-type">{userMBTI}</span>
               </button>
             )}
-            <button className="header-btn analysis-btn" onClick={() => setShowAnalysisModal(true)} title="AI 분석">
-              <i className="bi bi-graph-up-arrow"></i>
-            </button>
-            <button className="header-btn" onClick={() => setShowAchievementsModal(true)} title="도전과제">
-              <i className="bi bi-trophy-fill"></i>
-            </button>
-            <button className="header-btn" onClick={() => setShowStatsModal(true)} title="통계">
-              <i className="bi bi-bar-chart-fill"></i>
-            </button>
-            <button className="header-btn" onClick={() => setShowAboutModal(true)} title="서비스 소개">
-              <i className="bi bi-info-circle-fill"></i>
-            </button>
-            <button className="header-btn" onClick={() => setShowSettingsModal(true)} title="설정">
-              <i className="bi bi-gear-fill"></i>
+            {/* 데스크탑 메뉴 */}
+            <div className="desktop-menu">
+              <button className="header-btn analysis-btn" onClick={() => setShowAnalysisModal(true)} title="AI 분석">
+                <i className="bi bi-graph-up-arrow"></i>
+              </button>
+              <button className="header-btn" onClick={() => setShowAchievementsModal(true)} title="도전과제">
+                <i className="bi bi-trophy-fill"></i>
+              </button>
+              <button className="header-btn" onClick={() => setShowStatsModal(true)} title="통계">
+                <i className="bi bi-bar-chart-fill"></i>
+              </button>
+              <button className="header-btn" onClick={() => setShowAboutModal(true)} title="서비스 소개">
+                <i className="bi bi-info-circle-fill"></i>
+              </button>
+              <button className="header-btn" onClick={() => setShowSettingsModal(true)} title="설정">
+                <i className="bi bi-gear-fill"></i>
+              </button>
+            </div>
+            {/* 모바일 메뉴 토글 */}
+            <button className="mobile-menu-toggle" onClick={() => setShowMobileMenu(!showMobileMenu)}>
+              <i className={`bi ${showMobileMenu ? 'bi-x-lg' : 'bi-list'}`}></i>
             </button>
           </div>
+          {/* 모바일 드롭다운 메뉴 */}
+          {showMobileMenu && (
+            <div className="mobile-menu-dropdown">
+              <button onClick={() => { setShowAnalysisModal(true); setShowMobileMenu(false); }}>
+                <i className="bi bi-graph-up-arrow"></i> AI 분석
+              </button>
+              <button onClick={() => { setShowAchievementsModal(true); setShowMobileMenu(false); }}>
+                <i className="bi bi-trophy-fill"></i> 도전과제
+              </button>
+              <button onClick={() => { setShowStatsModal(true); setShowMobileMenu(false); }}>
+                <i className="bi bi-bar-chart-fill"></i> 통계
+              </button>
+              <button onClick={() => { setShowAboutModal(true); setShowMobileMenu(false); }}>
+                <i className="bi bi-info-circle-fill"></i> 서비스 소개
+              </button>
+              <button onClick={() => { setShowSettingsModal(true); setShowMobileMenu(false); }}>
+                <i className="bi bi-gear-fill"></i> 설정
+              </button>
+            </div>
+          )}
         </header>
 
         <main className="main-content">
@@ -1062,6 +1090,69 @@ const StyledWrapper = styled.div`
     &:hover {
       background: #6C63FF;
       color: #FFFFFF;
+    }
+  }
+
+  .desktop-menu {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .mobile-menu-toggle {
+    display: none;
+    background: #F0F4FF;
+    border: none;
+    color: #6C63FF;
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    font-size: 20px;
+    transition: all 0.2s;
+
+    &:hover {
+      background: #6C63FF;
+      color: #FFFFFF;
+    }
+  }
+
+  .mobile-menu-dropdown {
+    display: none;
+    position: absolute;
+    top: 100%;
+    right: 20px;
+    background: #FFFFFF;
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+    padding: 12px;
+    z-index: 100;
+    min-width: 180px;
+
+    button {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+      padding: 12px 16px;
+      background: none;
+      border: none;
+      border-radius: 10px;
+      color: #4A5568;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.2s;
+      text-align: left;
+
+      i {
+        color: #6C63FF;
+        font-size: 18px;
+        width: 20px;
+      }
+
+      &:hover {
+        background: #F0F4FF;
+        color: #6C63FF;
+      }
     }
   }
 
@@ -1877,10 +1968,39 @@ const StyledWrapper = styled.div`
   @media (max-width: 768px) {
     .header {
       padding: 16px 20px;
+      position: relative;
     }
 
     .logo {
       font-size: 18px;
+
+      i {
+        font-size: 20px;
+      }
+    }
+
+    .header-left {
+      gap: 8px;
+    }
+
+    .user-greeting {
+      display: none;
+    }
+
+    .desktop-menu {
+      display: none;
+    }
+
+    .mobile-menu-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .mobile-menu-dropdown {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
     }
 
     .main-content {
