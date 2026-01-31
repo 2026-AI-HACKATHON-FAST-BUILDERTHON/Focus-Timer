@@ -32,9 +32,11 @@
 
 ## 프로젝트 소개
 
-> **🚀 바로 체험하기:** https://focus-timer-web.onrender.com
->
-> **🔑 테스트 계정:** `test@focustimer.com` / `test1234`
+**AI가 당신의 집중 패턴을 학습하여 개인화된 집중 시간과 전략을 추천하는 스마트 타이머 서비스**
+
+| 바로 체험하기 | https://focus-timer-web.onrender.com |
+|--------------|--------------------------------------|
+| 테스트 계정 | `test@focustimer.com` / `test1234` |
 
 ### 문제 정의
 
