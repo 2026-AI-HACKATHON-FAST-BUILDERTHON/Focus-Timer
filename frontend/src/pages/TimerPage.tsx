@@ -79,6 +79,8 @@ const TimerPage: React.FC<TimerPageProps> = ({ userMBTI }) => {
   const [showAchievementsModal, setShowAchievementsModal] = useState(false);
   const [showMBTIModal, setShowMBTIModal] = useState(false);
   const [showAnalysisModal, setShowAnalysisModal] = useState(false);
+  const [showAboutModal, setShowAboutModal] = useState(false);
+  const userNickname = localStorage.getItem('userNickname');
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [achievementsLoading, setAchievementsLoading] = useState(false);
   const [earnedCoins, setEarnedCoins] = useState(0);
@@ -389,10 +391,18 @@ const TimerPage: React.FC<TimerPageProps> = ({ userMBTI }) => {
     <StyledWrapper>
       <div className="timer-page">
         <header className="header">
-          <h1 className="logo">
-            <i className="bi bi-clock-fill"></i>
-            Focus Timer
-          </h1>
+          <div className="header-left">
+            <h1 className="logo">
+              <i className="bi bi-clock-fill"></i>
+              Focus Timer
+            </h1>
+            {userNickname && (
+              <span className="user-greeting">
+                <i className="bi bi-person-fill"></i>
+                {userNickname}님
+              </span>
+            )}
+          </div>
           <div className="header-actions">
             {userMBTI && MBTI_PROFILES[userMBTI] && (
               <button className="mbti-badge-btn" onClick={() => setShowMBTIModal(true)}>
@@ -401,6 +411,9 @@ const TimerPage: React.FC<TimerPageProps> = ({ userMBTI }) => {
             )}
             <button className="header-btn analysis-btn" onClick={() => setShowAnalysisModal(true)} title="AI 분석">
               <i className="bi bi-graph-up-arrow"></i>
+            </button>
+            <button className="header-btn" onClick={() => setShowAboutModal(true)} title="서비스 소개">
+              <i className="bi bi-info-circle-fill"></i>
             </button>
             <button className="header-btn" onClick={() => setShowAchievementsModal(true)}>
               <i className="bi bi-trophy-fill"></i>
@@ -783,6 +796,125 @@ const TimerPage: React.FC<TimerPageProps> = ({ userMBTI }) => {
             </div>
           </div>
         )}
+
+        {/* 서비스 소개 모달 */}
+        {showAboutModal && (
+          <div className="modal-overlay" onClick={() => setShowAboutModal(false)}>
+            <div className="modal-content about-modal" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-header">
+                <h3><i className="bi bi-info-circle-fill"></i> Focus Timer 소개</h3>
+                <button className="close-btn" onClick={() => setShowAboutModal(false)}>
+                  <i className="bi bi-x-lg"></i>
+                </button>
+              </div>
+              <div className="about-modal-body">
+                {/* 서비스 소개 */}
+                <section className="about-section">
+                  <div className="about-hero">
+                    <div className="hero-icon">🐱</div>
+                    <h2>집중하지 못하는 당신을 위한<br/>AI 타이머</h2>
+                    <p>Focus Timer는 AI가 당신의 집중 패턴을 학습하여<br/>개인화된 집중 전략을 제안합니다.</p>
+                  </div>
+                </section>
+
+                {/* 왜 만들었나요? */}
+                <section className="about-section">
+                  <h3><i className="bi bi-question-circle-fill"></i> 왜 만들었나요?</h3>
+                  <div className="about-card">
+                    <p>기존 뽀모도로 타이머는 모든 사람에게 25분을 강요합니다.</p>
+                    <ul className="problem-list">
+                      <li><i className="bi bi-x-circle"></i> ADHD 경향이 있는 사람은 25분도 길게 느낌</li>
+                      <li><i className="bi bi-x-circle"></i> 몰입형 학습자는 25분이 짧아 흐름이 끊김</li>
+                      <li><i className="bi bi-x-circle"></i> 시간대별 최적 집중 시간이 다름</li>
+                    </ul>
+                    <p className="highlight">
+                      <i className="bi bi-lightbulb-fill"></i>
+                      Focus Timer는 <strong>당신에게 맞는 시간</strong>을 AI가 찾아줍니다!
+                    </p>
+                  </div>
+                </section>
+
+                {/* 어떻게 사용하나요? */}
+                <section className="about-section">
+                  <h3><i className="bi bi-play-circle-fill"></i> 어떻게 사용하나요?</h3>
+                  <div className="how-to-use">
+                    <div className="step-card">
+                      <div className="step-number">1</div>
+                      <div className="step-content">
+                        <h4>MBTI 학습 성향 분석</h4>
+                        <p>8개 질문으로 당신의 집중 유형을 파악합니다</p>
+                      </div>
+                    </div>
+                    <div className="step-card">
+                      <div className="step-number">2</div>
+                      <div className="step-content">
+                        <h4>AI 추천 받기</h4>
+                        <p>과제 유형과 시간대에 맞는 최적 설정을 추천받습니다</p>
+                      </div>
+                    </div>
+                    <div className="step-card">
+                      <div className="step-number">3</div>
+                      <div className="step-content">
+                        <h4>집중 & 성장</h4>
+                        <p>세션을 완료하고 코인과 도전과제를 획득하세요</p>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                {/* AI 기술 */}
+                <section className="about-section">
+                  <h3><i className="bi bi-cpu-fill"></i> AI 기술</h3>
+                  <div className="tech-cards">
+                    <div className="tech-card">
+                      <div className="tech-icon">
+                        <i className="bi bi-graph-up-arrow"></i>
+                      </div>
+                      <h4>XGBoost 예측</h4>
+                      <p>82.34% 정확도로 완주 확률 예측</p>
+                    </div>
+                    <div className="tech-card">
+                      <div className="tech-icon">
+                        <i className="bi bi-shuffle"></i>
+                      </div>
+                      <h4>Thompson Sampling</h4>
+                      <p>192개 전략 중 최적 조합 탐색</p>
+                    </div>
+                    <div className="tech-card">
+                      <div className="tech-icon">
+                        <i className="bi bi-clock-fill"></i>
+                      </div>
+                      <h4>골든타임 분석</h4>
+                      <p>시간대별 완주율 패턴 학습</p>
+                    </div>
+                    <div className="tech-card">
+                      <div className="tech-icon">
+                        <i className="bi bi-person-badge-fill"></i>
+                      </div>
+                      <h4>페르소나 분류</h4>
+                      <p>9가지 집중 유형 자동 분류</p>
+                    </div>
+                  </div>
+                </section>
+
+                {/* 팀 소개 */}
+                <section className="about-section">
+                  <h3><i className="bi bi-people-fill"></i> 팀 소개</h3>
+                  <div className="team-card">
+                    <div className="team-name">간장코드조림</div>
+                    <div className="team-event">FAST BUILDERTHON 2026</div>
+                    <div className="team-members">
+                      <span>신주용</span>
+                      <span>강지나</span>
+                      <span>송민지</span>
+                      <span>김현웅</span>
+                    </div>
+                  </div>
+                </section>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </StyledWrapper>
   );
@@ -805,6 +937,12 @@ const StyledWrapper = styled.div`
     border-bottom: 1px solid #E2E8F0;
   }
 
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
   .logo {
     display: flex;
     align-items: center;
@@ -815,6 +953,23 @@ const StyledWrapper = styled.div`
 
     i {
       font-size: 26px;
+    }
+  }
+
+  .user-greeting {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    background: linear-gradient(135deg, #F0F4FF 0%, #E8EDFF 100%);
+    border-radius: 20px;
+    color: #4A5568;
+    font-size: 14px;
+    font-weight: 500;
+
+    i {
+      color: #6C63FF;
+      font-size: 14px;
     }
   }
 
@@ -1744,6 +1899,268 @@ const StyledWrapper = styled.div`
     &::-webkit-scrollbar-thumb {
       background: #CBD5E0;
       border-radius: 3px;
+    }
+  }
+
+  /* 서비스 소개 모달 */
+  .about-modal {
+    max-width: 500px;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding-bottom: 0;
+  }
+
+  .about-modal-body {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    margin: 0 -28px 0 -28px;
+    padding: 0 28px 28px 28px;
+
+    &::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background: #F0F4FF;
+      border-radius: 3px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: #CBD5E0;
+      border-radius: 3px;
+    }
+  }
+
+  .about-section {
+    margin-bottom: 24px;
+
+    h3 {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 16px;
+      font-weight: 700;
+      color: #2D3748;
+      margin-bottom: 12px;
+
+      i {
+        color: #6C63FF;
+      }
+    }
+  }
+
+  .about-hero {
+    text-align: center;
+    padding: 24px 16px;
+    background: linear-gradient(135deg, #F0F4FF 0%, #E8EDFF 100%);
+    border-radius: 16px;
+
+    .hero-icon {
+      font-size: 48px;
+      margin-bottom: 12px;
+    }
+
+    h2 {
+      font-size: 20px;
+      font-weight: 700;
+      color: #2D3748;
+      line-height: 1.4;
+      margin-bottom: 8px;
+    }
+
+    p {
+      color: #718096;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+  }
+
+  .about-card {
+    background: #FAFBFF;
+    border-radius: 14px;
+    padding: 16px;
+
+    p {
+      color: #4A5568;
+      font-size: 14px;
+      margin-bottom: 12px;
+    }
+
+    .problem-list {
+      list-style: none;
+      padding: 0;
+      margin: 0 0 16px 0;
+
+      li {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 0;
+        color: #718096;
+        font-size: 13px;
+
+        i {
+          color: #FC8181;
+          font-size: 14px;
+        }
+      }
+    }
+
+    .highlight {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: linear-gradient(135deg, #6C63FF10 0%, #5046E510 100%);
+      border: 1px solid #6C63FF30;
+      border-radius: 10px;
+      padding: 12px;
+      color: #4A5568;
+      font-size: 13px;
+      margin: 0;
+
+      i {
+        color: #F6AD55;
+        font-size: 16px;
+      }
+
+      strong {
+        color: #6C63FF;
+      }
+    }
+  }
+
+  .how-to-use {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .step-card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: #FAFBFF;
+    border-radius: 12px;
+    padding: 14px;
+
+    .step-number {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, #6C63FF 0%, #5046E5 100%);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #FFFFFF;
+      font-size: 14px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .step-content {
+      h4 {
+        font-size: 14px;
+        font-weight: 600;
+        color: #2D3748;
+        margin-bottom: 2px;
+      }
+
+      p {
+        font-size: 12px;
+        color: #718096;
+        margin: 0;
+      }
+    }
+  }
+
+  .tech-cards {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  .tech-card {
+    background: #FAFBFF;
+    border-radius: 12px;
+    padding: 14px;
+    text-align: center;
+
+    .tech-icon {
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, #6C63FF20 0%, #5046E520 100%);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 8px;
+
+      i {
+        color: #6C63FF;
+        font-size: 18px;
+      }
+    }
+
+    h4 {
+      font-size: 13px;
+      font-weight: 600;
+      color: #2D3748;
+      margin-bottom: 4px;
+    }
+
+    p {
+      font-size: 11px;
+      color: #718096;
+      margin: 0;
+    }
+  }
+
+  .team-card {
+    background: linear-gradient(135deg, #F0F4FF 0%, #E8EDFF 100%);
+    border-radius: 14px;
+    padding: 20px;
+    text-align: center;
+
+    .team-name {
+      font-size: 18px;
+      font-weight: 700;
+      color: #6C63FF;
+      margin-bottom: 4px;
+    }
+
+    .team-event {
+      font-size: 12px;
+      color: #718096;
+      margin-bottom: 16px;
+    }
+
+    .team-members {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: wrap;
+
+      span {
+        background: #FFFFFF;
+        padding: 6px 14px;
+        border-radius: 20px;
+        font-size: 13px;
+        color: #4A5568;
+        font-weight: 500;
+      }
+    }
+  }
+
+  @media (max-width: 768px) {
+    .user-greeting {
+      display: none;
+    }
+
+    .tech-cards {
+      grid-template-columns: 1fr;
     }
   }
 `;
