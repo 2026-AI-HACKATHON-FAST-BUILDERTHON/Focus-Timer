@@ -82,14 +82,8 @@ const StyledWrapper = styled.div<{ $size: string; $isRunning: boolean }>`
     left: 0;
     width: 100%;
     height: 100%;
-    object-fit: contain;
+    object-fit: cover;
     border-radius: 20px;
-    /*
-     * GIF 배경을 페이지 배경과 블렌딩
-     * multiply: 흰색 배경 GIF에 적합 (흰색이 투명해짐)
-     */
-    mix-blend-mode: multiply;
-    filter: brightness(1.05);
 
     /* 부드러운 전환 효과 */
     opacity: 0;
