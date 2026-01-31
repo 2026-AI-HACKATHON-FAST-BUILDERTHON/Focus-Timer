@@ -542,9 +542,242 @@ AI Services Layer
 | MBTIProfiler | 16가지 MBTI 유형, 최적 설정 |
 
 Data Layer
-- In-Memory DB (MVP)
+- Supabase PostgreSQL (Production)
 - ML Models (pickle)
 - Generated Training Data (JSON)
+
+---
+
+## 데이터베이스 구조
+
+### ERD (Entity Relationship Diagram)
+
+```mermaid
+erDiagram
+    users ||--o{ sessions : "1:N"
+    users ||--o{ user_achievements : "1:N"
+    users ||--o{ golden_time_stats : "1:N"
+    users ||--o{ adaptive_difficulty_history : "1:N"
+    users ||--o{ user_survey_answers : "1:N"
+
+    users {
+        uuid id PK
+        string email UK
+        string password_hash
+        string nickname
+        int coin_balance
+        string mbti_type
+        int current_streak_days
+        timestamp created_at
+    }
+
+    sessions {
+        uuid id PK
+        uuid user_id FK
+        enum task_type
+        int difficulty
+        string goal
+        enum status
+        int planned_focus_min
+        int planned_break_min
+        int planned_rounds
+        json mode_plan
+        int total_focus_sec
+        int total_break_sec
+        int rounds_completed
+        int coin_reward
+        enum abort_reason
+        timestamp created_at
+    }
+
+    user_achievements {
+        uuid user_id FK
+        string achievement_id
+        timestamp unlocked_at
+        boolean is_unlocked
+    }
+
+    golden_time_stats {
+        uuid user_id FK
+        int hour
+        int day_of_week
+        int success_count
+        int total_count
+    }
+
+    adaptive_difficulty_history {
+        uuid user_id FK
+        int difficulty
+        boolean success
+        uuid session_id FK
+    }
+
+    user_survey_answers {
+        uuid user_id FK
+        string question_id
+        string answer
+    }
+```
+
+### 테이블 상세
+
+#### 1. users (사용자)
+
+| 컬럼 | 타입 | 설명 |
+|------|------|------|
+| id | UUID | Primary Key |
+| email | VARCHAR | 이메일 (Unique) |
+| password_hash | VARCHAR | 암호화된 비밀번호 |
+| nickname | VARCHAR | 닉네임 |
+| coin_balance | INTEGER | 보유 코인 |
+| mbti_type | VARCHAR | MBTI 유형 (INTJ 등) |
+| current_streak_days | INTEGER | 연속 성공 일수 |
+| created_at | TIMESTAMP | 가입일시 |
+
+#### 2. sessions (집중 세션)
+
+| 컬럼 | 타입 | 설명 |
+|------|------|------|
+| id | UUID | Primary Key |
+| user_id | UUID | Foreign Key → users |
+| task_type | ENUM | reading/practice/creation/routine |
+| difficulty | INTEGER | 난이도 (1-5) |
+| goal | VARCHAR | 목표 설명 |
+| status | ENUM | completed/aborted |
+| planned_focus_min | INTEGER | 계획 집중 시간(분) |
+| planned_break_min | INTEGER | 계획 휴식 시간(분) |
+| planned_rounds | INTEGER | 계획 라운드 수 |
+| mode_plan | JSON | 세션 구조 [{"focus":25},{"break":5},...] |
+| total_focus_sec | INTEGER | 실제 집중 시간(초) |
+| total_break_sec | INTEGER | 실제 휴식 시간(초) |
+| rounds_completed | INTEGER | 완료 라운드 수 |
+| coin_reward | INTEGER | 획득 코인 |
+| abort_reason | ENUM | 중단 사유 |
+| created_at | TIMESTAMP | 세션 시작 시간 |
+
+#### 3. user_achievements (사용자 업적)
+
+| 컬럼 | 타입 | 설명 |
+|------|------|------|
+| user_id | UUID | Foreign Key → users |
+| achievement_id | VARCHAR | 업적 ID |
+| unlocked_at | TIMESTAMP | 달성 시간 |
+| is_unlocked | BOOLEAN | 달성 여부 |
+
+#### 4. golden_time_stats (골든타임 통계)
+
+| 컬럼 | 타입 | 설명 |
+|------|------|------|
+| user_id | UUID | Foreign Key → users |
+| hour | INTEGER | 시간대 (0-23) |
+| day_of_week | INTEGER | 요일 (0-6) |
+| success_count | INTEGER | 성공 횟수 |
+| total_count | INTEGER | 총 시도 횟수 |
+
+#### 5. adaptive_difficulty_history (적응형 난이도 기록)
+
+| 컬럼 | 타입 | 설명 |
+|------|------|------|
+| user_id | UUID | Foreign Key → users |
+| difficulty | INTEGER | 난이도 (1-5) |
+| success | BOOLEAN | 성공 여부 |
+| session_id | UUID | Foreign Key → sessions |
+
+#### 6. user_survey_answers (MBTI 설문 답변)
+
+| 컬럼 | 타입 | 설명 |
+|------|------|------|
+| user_id | UUID | Foreign Key → users |
+| question_id | VARCHAR | 질문 ID |
+| answer | VARCHAR | 선택 답변 |
+
+---
+
+## 시스템 플로우차트
+
+### 사용자 여정 플로우
+
+```mermaid
+flowchart TD
+    A[🚀 앱 시작] --> B{로그인 여부}
+    B -->|No| C[회원가입/로그인]
+    C --> D{MBTI 설문 완료?}
+    D -->|No| E[📋 MBTI 설문]
+    E --> F[MBTI 결과 저장]
+    F --> G[🏠 타이머 화면]
+    D -->|Yes| G
+    B -->|Yes| G
+
+    G --> H[과제 유형/난이도 선택]
+    H --> I[🤖 AI 추천 요청]
+    I --> J[ML 예측 + MAB 최적화]
+    J --> K[추천 세션 표시]
+    K --> L{사용자 선택}
+    L -->|수정| M[설정 조정]
+    M --> K
+    L -->|시작| N[⏱️ 타이머 시작]
+
+    N --> O{세션 상태}
+    O -->|진행중| P[🐱 레벨 고양이 표시]
+    O -->|일시정지| Q[😴 쉬는 고양이 표시]
+    Q --> O
+    P --> O
+    O -->|완료| R[✅ 세션 완료]
+    O -->|중단| S[❌ 중단 사유 선택]
+
+    R --> T[코인 보상 지급]
+    T --> U[📊 통계 업데이트]
+    S --> U
+
+    U --> V[골든타임 통계 갱신]
+    V --> W[적응형 난이도 갱신]
+    W --> X[업적 체크]
+    X --> Y{새 업적?}
+    Y -->|Yes| Z[🏆 업적 달성 알림]
+    Z --> AA[레벨업 체크]
+    Y -->|No| AA
+    AA --> G
+```
+
+### AI 추천 시스템 플로우
+
+```mermaid
+flowchart LR
+    subgraph Input["📥 입력"]
+        A1[과제 유형]
+        A2[난이도]
+        A3[현재 시간]
+        A4[사용자 히스토리]
+    end
+
+    subgraph ML["🧠 ML 엔진"]
+        B1[XGBoost 완주 예측]
+        B2[Thompson Sampling MAB]
+        B3[골든타임 분석]
+        B4[적응형 난이도]
+    end
+
+    subgraph Output["📤 출력"]
+        C1[추천 세션 설정]
+        C2[완주 확률 %]
+        C3[리스크 레벨]
+        C4[마이크로 루틴]
+    end
+
+    A1 --> B1
+    A2 --> B1
+    A3 --> B1
+    A4 --> B1
+
+    B1 --> B2
+    B2 --> B3
+    B3 --> B4
+
+    B4 --> C1
+    B1 --> C2
+    B1 --> C3
+    B4 --> C4
+```
 
 ---
 
