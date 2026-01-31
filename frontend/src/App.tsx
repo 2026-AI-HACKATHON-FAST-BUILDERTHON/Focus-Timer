@@ -71,7 +71,11 @@ function App() {
           fontSize: '18px'
         }}>
           <div style={{ textAlign: 'center' }}>
-            <div style={{ marginBottom: '16px', fontSize: '48px' }}>🐱</div>
+            <img
+              src="/images/stop.gif"
+              alt="로딩"
+              style={{ width: '120px', height: '120px', marginBottom: '16px' }}
+            />
             <div>사용자 정보를 확인하는 중...</div>
           </div>
         </div>

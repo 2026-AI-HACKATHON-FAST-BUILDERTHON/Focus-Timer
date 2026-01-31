@@ -80,6 +80,7 @@ const TimerPage: React.FC<TimerPageProps> = ({ userMBTI }) => {
   const [showMBTIModal, setShowMBTIModal] = useState(false);
   const [showAnalysisModal, setShowAnalysisModal] = useState(false);
   const [showAboutModal, setShowAboutModal] = useState(false);
+  const [aboutTimerSeconds, setAboutTimerSeconds] = useState(30 * 60); // 30분 = 1800초
   const userNickname = localStorage.getItem('userNickname');
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [achievementsLoading, setAchievementsLoading] = useState(false);
@@ -225,6 +226,30 @@ const TimerPage: React.FC<TimerPageProps> = ({ userMBTI }) => {
       fetchAchievements();
     }
   }, [showAchievementsModal, fetchAchievements]);
+
+  // 서비스 소개 모달 30분 타이머
+  useEffect(() => {
+    if (showAboutModal) {
+      // 모달 열릴 때 30분으로 리셋
+      setAboutTimerSeconds(30 * 60);
+
+      const interval = setInterval(() => {
+        setAboutTimerSeconds(prev => {
+          if (prev <= 0) return 0;
+          return prev - 1;
+        });
+      }, 1000);
+
+      return () => clearInterval(interval);
+    }
+  }, [showAboutModal]);
+
+  // 타이머 포맷팅 함수
+  const formatAboutTimer = (totalSeconds: number) => {
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  };
 
   const handlePhaseComplete = useCallback((phase: TimerPhase) => {
     if (phase.type === 'focus') {
@@ -412,16 +437,16 @@ const TimerPage: React.FC<TimerPageProps> = ({ userMBTI }) => {
             <button className="header-btn analysis-btn" onClick={() => setShowAnalysisModal(true)} title="AI 분석">
               <i className="bi bi-graph-up-arrow"></i>
             </button>
+            <button className="header-btn" onClick={() => setShowAchievementsModal(true)} title="도전과제">
+              <i className="bi bi-trophy-fill"></i>
+            </button>
+            <button className="header-btn" onClick={() => setShowStatsModal(true)} title="통계">
+              <i className="bi bi-bar-chart-fill"></i>
+            </button>
             <button className="header-btn" onClick={() => setShowAboutModal(true)} title="서비스 소개">
               <i className="bi bi-info-circle-fill"></i>
             </button>
-            <button className="header-btn" onClick={() => setShowAchievementsModal(true)}>
-              <i className="bi bi-trophy-fill"></i>
-            </button>
-            <button className="header-btn" onClick={() => setShowStatsModal(true)}>
-              <i className="bi bi-bar-chart-fill"></i>
-            </button>
-            <button className="header-btn" onClick={() => setShowSettingsModal(true)}>
+            <button className="header-btn" onClick={() => setShowSettingsModal(true)} title="설정">
               <i className="bi bi-gear-fill"></i>
             </button>
           </div>
@@ -811,7 +836,10 @@ const TimerPage: React.FC<TimerPageProps> = ({ userMBTI }) => {
                 {/* 서비스 소개 */}
                 <section className="about-section">
                   <div className="about-hero">
-                    <div className="hero-icon">🐱</div>
+                    <div className="hero-timer">
+                      <div className="hero-timer-display">{formatAboutTimer(aboutTimerSeconds)}</div>
+                      <div className="hero-timer-label">집중 타이머</div>
+                    </div>
                     <h2>집중하지 못하는 당신을 위한<br/>AI 타이머</h2>
                     <p>Focus Timer는 AI가 당신의 집중 패턴을 학습하여<br/>개인화된 집중 전략을 제안합니다.</p>
                   </div>
@@ -1958,9 +1986,23 @@ const StyledWrapper = styled.div`
     background: linear-gradient(135deg, #F0F4FF 0%, #E8EDFF 100%);
     border-radius: 16px;
 
-    .hero-icon {
+    .hero-timer {
+      margin-bottom: 16px;
+    }
+
+    .hero-timer-display {
       font-size: 48px;
-      margin-bottom: 12px;
+      font-weight: 800;
+      color: #6C63FF;
+      font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Mono', 'Droid Sans Mono', monospace;
+      letter-spacing: 2px;
+      text-shadow: 0 2px 8px rgba(108, 99, 255, 0.2);
+    }
+
+    .hero-timer-label {
+      font-size: 12px;
+      color: #718096;
+      margin-top: 4px;
     }
 
     h2 {
