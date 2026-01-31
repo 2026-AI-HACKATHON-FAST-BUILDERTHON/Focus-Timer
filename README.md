@@ -740,7 +740,7 @@ MBTI 설문 질문
 
 ### 간장코드림
 
-**FAST BUILDERTHON 2025 참가팀**
+**FAST BUILDERTHON 2026 참가팀**
 
 | 역할 | 이름 |
 |------|------|
