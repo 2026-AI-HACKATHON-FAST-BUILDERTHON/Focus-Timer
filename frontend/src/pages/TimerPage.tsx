@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import styled from 'styled-components';
 import LevelCat from '../components/character/LevelCat';
 import StatusText from '../components/character/StatusText';
@@ -87,6 +87,10 @@ const TimerPage: React.FC<TimerPageProps> = ({ userMBTI }) => {
   const [earnedCoins, setEarnedCoins] = useState(0);
   const [userLevel, setUserLevel] = useState(1);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
+
+  // 오디오 refs
+  const bgMusicRef = useRef<HTMLAudioElement | null>(null);
+  const alertSoundRef = useRef<HTMLAudioElement | null>(null);
 
   // AI 추천 상태
   const [recommendation, setRecommendation] = useState<{
@@ -298,9 +302,18 @@ const TimerPage: React.FC<TimerPageProps> = ({ userMBTI }) => {
         weeklyMinutes: newWeeklyMinutes,
       });
     }
+    // 알림음 재생
+    if (settings.soundEnabled && alertSoundRef.current) {
+      alertSoundRef.current.currentTime = 0;
+      alertSoundRef.current.play().catch(console.error);
+    }
+    // 배경음악 정지
+    if (bgMusicRef.current) {
+      bgMusicRef.current.pause();
+    }
     setPageState('completed');
     setCurrentSessionId(null);
-  }, [sessionConfig, currentSessionId, stats, updateStats]);
+  }, [sessionConfig, currentSessionId, stats, updateStats, settings.soundEnabled]);
 
   const timer = useTimer({
     onPhaseComplete: handlePhaseComplete,
@@ -341,13 +354,28 @@ const TimerPage: React.FC<TimerPageProps> = ({ userMBTI }) => {
 
     timer.start(phases);
     setPageState('running');
+
+    // 배경음악 시작
+    if (settings.soundEnabled && bgMusicRef.current) {
+      bgMusicRef.current.currentTime = 0;
+      bgMusicRef.current.volume = 0.3;
+      bgMusicRef.current.play().catch(console.error);
+    }
   };
 
   const handlePauseResume = () => {
     if (timer.isPaused) {
       timer.resume();
+      // 배경음악 재개
+      if (settings.soundEnabled && bgMusicRef.current) {
+        bgMusicRef.current.play().catch(console.error);
+      }
     } else {
       timer.pause();
+      // 배경음악 일시정지
+      if (bgMusicRef.current) {
+        bgMusicRef.current.pause();
+      }
     }
   };
 
@@ -357,6 +385,12 @@ const TimerPage: React.FC<TimerPageProps> = ({ userMBTI }) => {
 
   const handleAbortConfirm = async (reason: AbortReason, detail?: string) => {
     timer.stop();
+
+    // 배경음악 정지
+    if (bgMusicRef.current) {
+      bgMusicRef.current.pause();
+      bgMusicRef.current.currentTime = 0;
+    }
 
     // 경과 시간 계산
     const elapsedSec = sessionStartTime
@@ -686,17 +720,16 @@ const TimerPage: React.FC<TimerPageProps> = ({ userMBTI }) => {
                     <span className="slider"></span>
                   </label>
                 </div>
-                <div className="setting-item disabled">
+                <div className="setting-item">
                   <div className="setting-info">
-                    <i className="bi bi-bell"></i>
-                    <span>알림 소리</span>
-                    <span className="coming-soon">준비 중</span>
+                    <i className="bi bi-music-note-beamed"></i>
+                    <span>배경음악 & 알림</span>
                   </div>
                   <label className="toggle">
                     <input
                       type="checkbox"
-                      checked={false}
-                      disabled
+                      checked={settings.soundEnabled}
+                      onChange={(e) => updateSetting('soundEnabled', e.target.checked)}
                     />
                     <span className="slider"></span>
                   </label>
@@ -984,6 +1017,10 @@ const TimerPage: React.FC<TimerPageProps> = ({ userMBTI }) => {
             </div>
           </div>
         )}
+
+        {/* 오디오 요소 */}
+        <audio ref={bgMusicRef} src="/sounds/music.mp3" loop />
+        <audio ref={alertSoundRef} src="/sounds/alart.mp3" />
       </div>
     </StyledWrapper>
   );
