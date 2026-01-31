@@ -699,41 +699,41 @@ erDiagram
 
 ```mermaid
 flowchart TD
-    A[🚀 앱 시작] --> B{로그인 여부}
+    A[앱 시작] --> B{로그인 여부}
     B -->|No| C[회원가입/로그인]
     C --> D{MBTI 설문 완료?}
-    D -->|No| E[📋 MBTI 설문]
+    D -->|No| E[MBTI 설문]
     E --> F[MBTI 결과 저장]
-    F --> G[🏠 타이머 화면]
+    F --> G[타이머 화면]
     D -->|Yes| G
     B -->|Yes| G
 
     G --> H[과제 유형/난이도 선택]
-    H --> I[🤖 AI 추천 요청]
+    H --> I[AI 추천 요청]
     I --> J[ML 예측 + MAB 최적화]
     J --> K[추천 세션 표시]
     K --> L{사용자 선택}
     L -->|수정| M[설정 조정]
     M --> K
-    L -->|시작| N[⏱️ 타이머 시작]
+    L -->|시작| N[타이머 시작]
 
     N --> O{세션 상태}
-    O -->|진행중| P[🐱 레벨 고양이 표시]
-    O -->|일시정지| Q[😴 쉬는 고양이 표시]
+    O -->|진행중| P[레벨 고양이 표시]
+    O -->|일시정지| Q[쉬는 고양이 표시]
     Q --> O
     P --> O
-    O -->|완료| R[✅ 세션 완료]
-    O -->|중단| S[❌ 중단 사유 선택]
+    O -->|완료| R[세션 완료]
+    O -->|중단| S[중단 사유 선택]
 
     R --> T[코인 보상 지급]
-    T --> U[📊 통계 업데이트]
+    T --> U[통계 업데이트]
     S --> U
 
     U --> V[골든타임 통계 갱신]
     V --> W[적응형 난이도 갱신]
     W --> X[업적 체크]
     X --> Y{새 업적?}
-    Y -->|Yes| Z[🏆 업적 달성 알림]
+    Y -->|Yes| Z[업적 달성 알림]
     Z --> AA[레벨업 체크]
     Y -->|No| AA
     AA --> G
@@ -743,21 +743,21 @@ flowchart TD
 
 ```mermaid
 flowchart LR
-    subgraph Input["📥 입력"]
+    subgraph Input["입력"]
         A1[과제 유형]
         A2[난이도]
         A3[현재 시간]
         A4[사용자 히스토리]
     end
 
-    subgraph ML["🧠 ML 엔진"]
+    subgraph ML["ML 엔진"]
         B1[XGBoost 완주 예측]
         B2[Thompson Sampling MAB]
         B3[골든타임 분석]
         B4[적응형 난이도]
     end
 
-    subgraph Output["📤 출력"]
+    subgraph Output["출력"]
         C1[추천 세션 설정]
         C2[완주 확률 %]
         C3[리스크 레벨]
