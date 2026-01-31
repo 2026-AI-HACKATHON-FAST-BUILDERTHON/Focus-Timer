@@ -802,7 +802,6 @@ flowchart LR
 | Email | `test@focustimer.com` |
 | Password | `test1234` |
 | Nickname | 코드간장조림 |
-| 특징 | 만렙 계정 (코인 999,999 / 연속 100일 / 업적 25개 전부 달성) |
 
 ---
 
