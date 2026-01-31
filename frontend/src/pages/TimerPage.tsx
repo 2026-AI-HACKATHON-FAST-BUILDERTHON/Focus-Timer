@@ -882,7 +882,7 @@ const TimerPage: React.FC<TimerPageProps> = ({ userMBTI }) => {
                       <div className="hero-timer-label">집중 타이머</div>
                     </div>
                     <h2>집중하지 못하는 당신을 위한<br/>AI 타이머</h2>
-                    <p>Focus Timer는 AI가 당신의 집중 패턴을 학습하여<br/>개인화된 집중 전략을 제안합니다.</p>
+                    <p>Focus Timer는 AI가 당신의 집중 패턴을<br/>학습하여 개인화된 집중 전략을 제안합니다.</p>
                   </div>
                 </section>
 
