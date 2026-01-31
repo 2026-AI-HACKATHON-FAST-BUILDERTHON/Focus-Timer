@@ -1,0 +1,62 @@
+# Dependencies
+node_modules/
+venv/
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+pip-wheel-metadata/
+
+# Build outputs
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Environment
+.env
+.env.local
+.env.*.local
+*.env
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+*.log
+
+# Testing
+coverage/
+.coverage
+htmlcov/
+.pytest_cache/
+.tox/
+
+# ML Models (generated)
+backend/models/*.pkl
+backend/models/*.joblib
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
+
+# Misc
+.pnp
+.pnp.js
+*.local
+
+# OMC (Claude Code plugin state)
+.omc/
+
+# Temporary files
+*.tmp
+*.temp
+.cache/

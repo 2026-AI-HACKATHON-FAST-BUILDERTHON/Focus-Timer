@@ -1,0 +1,364 @@
+/**
+ * Focus Timer API Service
+ */
+
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+
+// 인증 토큰 가져오기
+const getAuthToken = (): string | null => {
+  return localStorage.getItem('authToken');
+};
+
+// API 요청 헬퍼
+async function apiRequest<T>(
+  endpoint: string,
+  options: RequestInit = {}
+): Promise<T> {
+  const token = getAuthToken();
+
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+    ...(token && { Authorization: `Bearer ${token}` }),
+    ...options.headers,
+  };
+
+  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    ...options,
+    headers,
+  });
+
+  if (!response.ok) {
+    throw new Error(`API Error: ${response.status}`);
+  }
+
+  return response.json();
+}
+
+// 추천 API
+export interface RecommendationRequest {
+  task_type: 'reading' | 'practice' | 'creation' | 'routine';
+  difficulty: number;
+  hour: number;
+  day_of_week: number;
+}
+
+export interface LoopPhase {
+  type: 'focus' | 'break';
+  minutes: number;
+}
+
+export interface RecommendationResponse {
+  recommended_loop: LoopPhase[];
+  predicted_completion_prob: number;
+  reason: string;
+  risk_level: 'low' | 'medium' | 'high';
+  micro_routine: string | null;
+  persona_type: string | null;
+}
+
+export async function getRecommendation(
+  request: RecommendationRequest
+): Promise<RecommendationResponse> {
+  return apiRequest<RecommendationResponse>('/recommendation', {
+    method: 'POST',
+    body: JSON.stringify(request),
+  });
+}
+
+export async function getQuickRecommendation(): Promise<RecommendationResponse> {
+  return apiRequest<RecommendationResponse>('/recommendation/quick');
+}
+
+// 골든타임 API
+export interface GoldenTimeResponse {
+  golden_hours: number[];
+  golden_hours_text: string[];
+  best_day: number | null;
+  best_day_text: string | null;
+  hourly_rates: Record<number, number>;
+}
+
+export async function getGoldenTime(): Promise<GoldenTimeResponse> {
+  return apiRequest<GoldenTimeResponse>('/recommendation/golden-time');
+}
+
+// 적응형 난이도 API
+export interface AdaptiveDifficultyResponse {
+  recommended_difficulty: number;
+  objective_difficulty_score: number;
+  user_completion_rate: number;
+  explanation: string;
+}
+
+export async function getAdaptiveDifficulty(
+  taskType: string,
+  focusMinutes: number
+): Promise<AdaptiveDifficultyResponse> {
+  return apiRequest<AdaptiveDifficultyResponse>(
+    `/recommendation/adaptive-difficulty?task_type=${taskType}&focus_minutes=${focusMinutes}`
+  );
+}
+
+// 페르소나 API
+export interface PersonaResponse {
+  persona_type: string;
+  persona_name: string;
+  description: string;
+  completion_rate: number;
+  avg_focus_minutes: number;
+  top_abort_reason: string;
+  confidence: number;
+  tips?: string[];
+}
+
+export async function getUserPersona(userId: string): Promise<PersonaResponse> {
+  return apiRequest<PersonaResponse>(`/recommendation/persona/${userId}`);
+}
+
+// 세션 피드백 API
+export async function submitSessionFeedback(
+  sessionId: string,
+  focusMinutes: number,
+  breakMinutes: number,
+  rounds: number,
+  completed: boolean
+): Promise<{ status: string; message: string }> {
+  return apiRequest('/recommendation/feedback', {
+    method: 'POST',
+    body: JSON.stringify({
+      session_id: sessionId,
+      focus_minutes: focusMinutes,
+      break_minutes: breakMinutes,
+      rounds,
+      completed,
+    }),
+  });
+}
+
+// 도전과제 API
+export interface Achievement {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  rarity: string;
+  icon: string;
+  coin_reward: number;
+  unlocked: boolean;
+  unlocked_at?: string;
+  progress?: number;
+}
+
+export interface AchievementListResponse {
+  total: number;
+  unlocked: number;
+  achievements: Achievement[];
+  total_coins_earned: number;
+}
+
+export async function getAchievements(): Promise<AchievementListResponse> {
+  return apiRequest<AchievementListResponse>('/achievements');
+}
+
+export async function checkAchievements(): Promise<{
+  new_achievements: Achievement[];
+  total_new: number;
+  coins_earned: number;
+}> {
+  return apiRequest('/achievements/check', { method: 'POST' });
+}
+
+// MBTI 설문 API
+export interface SurveyQuestion {
+  id: string;
+  question: string;
+  dimension: string;
+  options: { value: string; text: string; icon: string }[];
+}
+
+export async function getSurveyQuestions(): Promise<{
+  total_questions: number;
+  questions: SurveyQuestion[];
+}> {
+  return apiRequest('/survey/questions');
+}
+
+export interface SurveyResult {
+  mbti_type: string;
+  profile: {
+    type_code: string;
+    name: string;
+    nickname: string;
+    study_style: string;
+    optimal_focus_range: [number, number];
+    optimal_break_range: [number, number];
+    completion_tendency: number;
+    tips: string[];
+  };
+  optimal_settings: {
+    focus_minutes: number;
+    break_minutes: number;
+    rounds: number;
+  };
+}
+
+export async function submitSurvey(
+  answers: Record<string, string>
+): Promise<SurveyResult> {
+  return apiRequest('/survey/submit', {
+    method: 'POST',
+    body: JSON.stringify({ answers }),
+  });
+}
+
+export async function getSurveyResult(): Promise<SurveyResult & { has_result: boolean }> {
+  return apiRequest('/survey/result');
+}
+
+// 인증 API (데모용)
+export async function demoLogin(
+  email: string,
+  password: string
+): Promise<{ access_token: string; user: { user_id: string; email: string } }> {
+  return apiRequest('/auth/login', {
+    method: 'POST',
+    body: JSON.stringify({ email, password }),
+  });
+}
+
+export async function demoSignup(
+  email: string,
+  password: string,
+  nickname: string
+): Promise<{ user_id: string; email: string; nickname: string }> {
+  return apiRequest('/auth/signup', {
+    method: 'POST',
+    body: JSON.stringify({ email, password, nickname }),
+  });
+}
+
+// ===============================
+// Analytics API (AI 분석 대시보드)
+// ===============================
+
+// 골든타임 히트맵
+export interface HourlyHeatmapData {
+  hour: number;
+  day: number;
+  total_sessions: number;
+  completed_sessions: number;
+  completion_rate: number;
+}
+
+export interface GoldenTimeHeatmapResponse {
+  heatmap_data: HourlyHeatmapData[];
+  golden_hours: number[];
+  worst_hours: number[];
+  best_day: number | null;
+  best_day_name: string | null;
+  total_sessions_analyzed: number;
+}
+
+export async function getGoldenTimeHeatmap(): Promise<GoldenTimeHeatmapResponse> {
+  return apiRequest<GoldenTimeHeatmapResponse>('/analytics/golden-time-heatmap');
+}
+
+// 페르소나 분석
+export interface PersonaAnalysisResponse {
+  persona_type: string;
+  persona_name: string;
+  persona_icon: string;
+  description: string;
+  strengths: string[];
+  weaknesses: string[];
+  tips: string[];
+  completion_rate: number;
+  avg_focus_minutes: number;
+  top_abort_reason: string | null;
+  confidence: number;
+}
+
+export async function getPersonaAnalysis(): Promise<PersonaAnalysisResponse> {
+  return apiRequest<PersonaAnalysisResponse>('/analytics/persona');
+}
+
+// 트렌드 분석
+export interface TrendDataPoint {
+  date: string;
+  day_name: string;
+  focus_minutes: number;
+  sessions: number;
+  completed: number;
+  completion_rate: number;
+}
+
+export interface TrendAnalysisResponse {
+  daily_data: TrendDataPoint[];
+  weekly_trend: 'improving' | 'stable' | 'declining';
+  completion_rate_change: number;
+  focus_time_change: number;
+  streak_days: number;
+  best_streak: number;
+}
+
+export async function getTrendAnalysis(days: number = 14): Promise<TrendAnalysisResponse> {
+  return apiRequest<TrendAnalysisResponse>(`/analytics/trends?days=${days}`);
+}
+
+// AI 인사이트
+export interface AIInsight {
+  type: 'success' | 'warning' | 'tip' | 'achievement';
+  icon: string;
+  title: string;
+  message: string;
+  priority: number;
+}
+
+export interface AIInsightsResponse {
+  insights: AIInsight[];
+  summary: string;
+  generated_at: string;
+}
+
+export async function getAIInsights(): Promise<AIInsightsResponse> {
+  return apiRequest<AIInsightsResponse>('/analytics/insights');
+}
+
+// 레벨 정보
+export interface LevelInfo {
+  level: number;
+  level_name: string;
+  level_icon: string;
+  current_achievements: number;
+  next_level_threshold: number;
+  progress_percent: number;
+  total_achievements: number;
+}
+
+export async function getUserLevel(): Promise<LevelInfo> {
+  return apiRequest<LevelInfo>('/analytics/level');
+}
+
+// 주간 리포트
+export interface DailyStat {
+  date: string;
+  day_name: string;
+  focus_minutes: number;
+  sessions: number;
+  completed: number;
+}
+
+export interface WeeklyReportResponse {
+  total_focus_minutes: number;
+  total_sessions: number;
+  completed_sessions: number;
+  completion_rate: number;
+  most_common_abort_reason: string | null;
+  best_focus_hour: number | null;
+  experiment_suggestion: string;
+  daily_stats: DailyStat[];
+}
+
+export async function getWeeklyReport(): Promise<WeeklyReportResponse> {
+  return apiRequest<WeeklyReportResponse>('/report/weekly');
+}
