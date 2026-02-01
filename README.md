@@ -61,20 +61,17 @@
 
 <div align="center">
 
-| 메인 타이머 | 집중 세션 | 서비스 소개 |
+| 메인 페이지 | 타이머 화면 | 서비스 소개 |
 |:---:|:---:|:---:|
-| <img src="docs/screen_1.jpeg" width="250"/> | <img src="docs/screen_2.png" width="250"/> | <img src="docs/screen_7.png" width="250"/> |
-| AI 맞춤 추천 + 레벨 캐릭터 | 실시간 타이머 진행 | 30분 타이머 서비스 소개 |
+| <img src="docs/screen_1.jpeg" height="400"/> | <img src="docs/screen_2.png" height="400"/> | <img src="docs/screen_7.png" height="400"/> |
 
-| AI 분석 - 개요 | AI 분석 - 골든타임 | AI 분석 - 페르소나 |
+| AI 분석 대시보드(개요) | AI 분석 대시보드(골든타임) | AI 분석 대시보드(페르소나) |
 |:---:|:---:|:---:|
-| <img src="docs/screen_3.png" width="250"/> | <img src="docs/screen_4.png" width="250"/> | <img src="docs/screen_5.png" width="250"/> |
-| 완주율, 연속 성공, 인사이트 | 시간대별 완주율 히트맵 | 나의 집중 유형 분석 |
+| <img src="docs/screen_3.png" height="400"/> | <img src="docs/screen_4.png" height="400"/> | <img src="docs/screen_5.png" height="400"/> |
 
 | 도전과제 |
 |:---:|
-| <img src="docs/screen_6.png" width="250"/> |
-| 57개 업적 + 코인 보상 |
+| <img src="docs/screen_6.png" height="400"/> |
 
 </div>
 
