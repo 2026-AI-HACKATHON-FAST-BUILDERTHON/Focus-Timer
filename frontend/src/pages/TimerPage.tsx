@@ -114,17 +114,15 @@ const TimerPage: React.FC<TimerPageProps> = ({ userMBTI }) => {
     };
   });
 
-  // 실제 통계 상태 관리
-  const [stats, setStats] = useState<Stats>(() => {
-    const saved = localStorage.getItem('focusTimerStats');
-    return saved ? JSON.parse(saved) : {
-      totalCoins: 150,
-      completedSessions: 12,
-      streakDays: 3,
-      completionRate: 85,
-      weeklyMinutes: [45, 60, 30, 75, 50, 20, 0], // 월~일
-    };
+  // 실제 통계 상태 관리 (서버에서 가져옴)
+  const [stats, setStats] = useState<Stats>({
+    totalCoins: 0,
+    completedSessions: 0,
+    streakDays: 0,
+    completionRate: 0,
+    weeklyMinutes: [0, 0, 0, 0, 0, 0, 0],
   });
+  const [statsLoading, setStatsLoading] = useState(true);
 
   // 설정 저장
   const updateSetting = (key: keyof Settings, value: boolean) => {
@@ -133,14 +131,34 @@ const TimerPage: React.FC<TimerPageProps> = ({ userMBTI }) => {
     localStorage.setItem('focusTimerSettings', JSON.stringify(newSettings));
   };
 
-  // 통계 저장
-  const updateStats = useCallback((newStats: Partial<Stats>) => {
-    setStats(prev => {
-      const updated = { ...prev, ...newStats };
-      localStorage.setItem('focusTimerStats', JSON.stringify(updated));
-      return updated;
-    });
+  // 서버에서 통계 가져오기
+  const fetchStats = useCallback(async () => {
+    setStatsLoading(true);
+    try {
+      // 사용자 정보 (코인, 연속일수)와 세션 통계를 병렬로 가져옴
+      const [userInfo, sessionStats] = await Promise.all([
+        api.getUserInfo(),
+        api.getSessionStats(),
+      ]);
+
+      setStats({
+        totalCoins: userInfo.coin_balance,
+        completedSessions: sessionStats.completed_sessions,
+        streakDays: userInfo.current_streak_days,
+        completionRate: Math.round(sessionStats.completion_rate * 100),
+        weeklyMinutes: [0, 0, 0, 0, 0, 0, 0], // TODO: 주간 통계 API 추가 시 연동
+      });
+    } catch (error) {
+      console.error('Failed to fetch stats:', error);
+    } finally {
+      setStatsLoading(false);
+    }
   }, []);
+
+  // 컴포넌트 마운트 시 통계 가져오기
+  useEffect(() => {
+    fetchStats();
+  }, [fetchStats]);
 
   // AI 추천 가져오기
   const fetchRecommendation = useCallback(async () => {
@@ -281,6 +299,9 @@ const TimerPage: React.FC<TimerPageProps> = ({ userMBTI }) => {
 
           // 도전과제 확인
           api.checkAchievements().catch(console.error);
+
+          // 서버에서 최신 통계 가져오기
+          fetchStats();
         } catch (error) {
           console.error('Failed to complete session:', error);
           // API 실패시 로컬 계산값 사용
@@ -289,18 +310,6 @@ const TimerPage: React.FC<TimerPageProps> = ({ userMBTI }) => {
       } else {
         setEarnedCoins(totalFocusMinutes * 10);
       }
-
-      // 로컬 통계 업데이트
-      const today = new Date().getDay();
-      const dayIndex = today === 0 ? 6 : today - 1;
-      const newWeeklyMinutes = [...stats.weeklyMinutes];
-      newWeeklyMinutes[dayIndex] += totalFocusMinutes;
-
-      updateStats({
-        totalCoins: stats.totalCoins + (totalFocusMinutes * 10),
-        completedSessions: stats.completedSessions + 1,
-        weeklyMinutes: newWeeklyMinutes,
-      });
     }
     // 알림음 재생
     if (settings.soundEnabled && alertSoundRef.current) {
@@ -313,7 +322,7 @@ const TimerPage: React.FC<TimerPageProps> = ({ userMBTI }) => {
     }
     setPageState('completed');
     setCurrentSessionId(null);
-  }, [sessionConfig, currentSessionId, stats, updateStats, settings.soundEnabled]);
+  }, [sessionConfig, currentSessionId, fetchStats, settings.soundEnabled]);
 
   const timer = useTimer({
     onPhaseComplete: handlePhaseComplete,
@@ -643,29 +652,36 @@ const TimerPage: React.FC<TimerPageProps> = ({ userMBTI }) => {
                   <i className="bi bi-x-lg"></i>
                 </button>
               </div>
-              <div className="stats-grid">
-                <div className="stat-card coin-card">
-                  <i className="bi bi-coin"></i>
-                  <div className="stat-value">{stats.totalCoins}</div>
-                  <div className="stat-label">보유 코인</div>
-                  <div className="stat-hint">사용처 : 개발중!!</div>
+              {statsLoading ? (
+                <div className="stats-loading">
+                  <i className="bi bi-arrow-repeat spinning"></i>
+                  <span>통계 불러오는 중...</span>
                 </div>
-                <div className="stat-card">
-                  <i className="bi bi-clock-history"></i>
-                  <div className="stat-value">{stats.completedSessions}</div>
-                  <div className="stat-label">완료 세션</div>
+              ) : (
+                <div className="stats-grid">
+                  <div className="stat-card coin-card">
+                    <i className="bi bi-coin"></i>
+                    <div className="stat-value">{stats.totalCoins.toLocaleString()}</div>
+                    <div className="stat-label">보유 코인</div>
+                    <div className="stat-hint">사용처 : 개발중!!</div>
+                  </div>
+                  <div className="stat-card">
+                    <i className="bi bi-clock-history"></i>
+                    <div className="stat-value">{stats.completedSessions.toLocaleString()}</div>
+                    <div className="stat-label">완료 세션</div>
+                  </div>
+                  <div className="stat-card">
+                    <i className="bi bi-fire"></i>
+                    <div className="stat-value">{stats.streakDays}일</div>
+                    <div className="stat-label">연속 집중</div>
+                  </div>
+                  <div className="stat-card">
+                    <i className="bi bi-trophy"></i>
+                    <div className="stat-value">{stats.completionRate}%</div>
+                    <div className="stat-label">완주율</div>
+                  </div>
                 </div>
-                <div className="stat-card">
-                  <i className="bi bi-fire"></i>
-                  <div className="stat-value">{stats.streakDays}일</div>
-                  <div className="stat-label">연속 집중</div>
-                </div>
-                <div className="stat-card">
-                  <i className="bi bi-trophy"></i>
-                  <div className="stat-value">{stats.completionRate}%</div>
-                  <div className="stat-label">완주율</div>
-                </div>
-              </div>
+              )}
               <div className="weekly-chart">
                 <h4>이번 주 집중 시간 (분)</h4>
                 <div className="chart-bars">
@@ -1451,6 +1467,30 @@ const StyledWrapper = styled.div`
   }
 
   /* 통계 모달 */
+  .stats-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    color: #718096;
+
+    i {
+      font-size: 32px;
+      color: #6C63FF;
+      margin-bottom: 12px;
+    }
+
+    .spinning {
+      animation: spin 1s linear infinite;
+    }
+  }
+
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
   .stats-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
