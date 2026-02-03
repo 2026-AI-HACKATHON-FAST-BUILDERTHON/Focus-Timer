@@ -320,6 +320,35 @@ export async function demoSignup(
   });
 }
 
+// 이메일 중복 확인
+export interface CheckAvailabilityResponse {
+  available: boolean;
+  message: string;
+}
+
+export async function checkEmailAvailability(email: string): Promise<CheckAvailabilityResponse> {
+  return apiRequest<CheckAvailabilityResponse>(`/auth/check-email?email=${encodeURIComponent(email)}`);
+}
+
+// 닉네임 중복 확인
+export async function checkNicknameAvailability(nickname: string): Promise<CheckAvailabilityResponse> {
+  return apiRequest<CheckAvailabilityResponse>(`/auth/check-nickname?nickname=${encodeURIComponent(nickname)}`);
+}
+
+// 현재 사용자 정보 조회
+export interface UserInfo {
+  user_id: string;
+  email: string;
+  nickname: string | null;
+  coin_balance: number;
+  mbti_type: string | null;
+  current_streak_days: number;
+}
+
+export async function getUserInfo(): Promise<UserInfo> {
+  return apiRequest<UserInfo>('/auth/me');
+}
+
 // ===============================
 // Analytics API (AI 분석 대시보드)
 // ===============================

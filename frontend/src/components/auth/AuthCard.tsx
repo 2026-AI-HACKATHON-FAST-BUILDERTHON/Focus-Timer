@@ -1,10 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
+import * as api from '../../services/api';
 
 interface AuthCardProps {
   onLogin: (email: string, password: string) => void;
   onSignup: (name: string, email: string, password: string) => void;
   isLoading?: boolean;
+}
+
+interface ValidationState {
+  isChecking: boolean;
+  isValid: boolean | null;
+  message: string;
 }
 
 const AuthCard: React.FC<AuthCardProps> = ({ onLogin, onSignup, isLoading }) => {
@@ -15,6 +22,100 @@ const AuthCard: React.FC<AuthCardProps> = ({ onLogin, onSignup, isLoading }) => 
   const [signupEmail, setSignupEmail] = useState('');
   const [signupPassword, setSignupPassword] = useState('');
 
+  // 유효성 검사 상태
+  const [emailValidation, setEmailValidation] = useState<ValidationState>({
+    isChecking: false,
+    isValid: null,
+    message: '',
+  });
+  const [nicknameValidation, setNicknameValidation] = useState<ValidationState>({
+    isChecking: false,
+    isValid: null,
+    message: '',
+  });
+
+  // 이메일 형식 검사
+  const isValidEmailFormat = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  // 디바운스된 이메일 중복 검사
+  useEffect(() => {
+    if (!signupEmail) {
+      setEmailValidation({ isChecking: false, isValid: null, message: '' });
+      return;
+    }
+
+    if (!isValidEmailFormat(signupEmail)) {
+      setEmailValidation({
+        isChecking: false,
+        isValid: false,
+        message: '올바른 이메일 형식이 아닙니다',
+      });
+      return;
+    }
+
+    setEmailValidation((prev) => ({ ...prev, isChecking: true }));
+
+    const timer = setTimeout(async () => {
+      try {
+        const result = await api.checkEmailAvailability(signupEmail);
+        setEmailValidation({
+          isChecking: false,
+          isValid: result.available,
+          message: result.message,
+        });
+      } catch {
+        setEmailValidation({
+          isChecking: false,
+          isValid: null,
+          message: '확인 중 오류가 발생했습니다',
+        });
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [signupEmail]);
+
+  // 디바운스된 닉네임 중복 검사
+  useEffect(() => {
+    if (!signupName) {
+      setNicknameValidation({ isChecking: false, isValid: null, message: '' });
+      return;
+    }
+
+    if (signupName.length < 2) {
+      setNicknameValidation({
+        isChecking: false,
+        isValid: false,
+        message: '닉네임은 2자 이상이어야 합니다',
+      });
+      return;
+    }
+
+    setNicknameValidation((prev) => ({ ...prev, isChecking: true }));
+
+    const timer = setTimeout(async () => {
+      try {
+        const result = await api.checkNicknameAvailability(signupName);
+        setNicknameValidation({
+          isChecking: false,
+          isValid: result.available,
+          message: result.message,
+        });
+      } catch {
+        setNicknameValidation({
+          isChecking: false,
+          isValid: null,
+          message: '확인 중 오류가 발생했습니다',
+        });
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [signupName]);
+
   const handleLoginSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onLogin(loginEmail, loginPassword);
@@ -22,8 +123,21 @@ const AuthCard: React.FC<AuthCardProps> = ({ onLogin, onSignup, isLoading }) => 
 
   const handleSignupSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    // 유효성 검사 통과 확인
+    if (emailValidation.isValid === false || nicknameValidation.isValid === false) {
+      return;
+    }
+
     onSignup(signupName, signupEmail, signupPassword);
   };
+
+  const isSignupDisabled =
+    isLoading ||
+    emailValidation.isChecking ||
+    nicknameValidation.isChecking ||
+    emailValidation.isValid === false ||
+    nicknameValidation.isValid === false;
 
   return (
     <StyledWrapper>
@@ -86,9 +200,35 @@ const AuthCard: React.FC<AuthCardProps> = ({ onLogin, onSignup, isLoading }) => 
                   placeholder="닉네임"
                   value={signupName}
                   onChange={(e) => setSignupName(e.target.value)}
+                  className={
+                    nicknameValidation.isValid === true
+                      ? 'valid'
+                      : nicknameValidation.isValid === false
+                      ? 'invalid'
+                      : ''
+                  }
                   required
                 />
+                {nicknameValidation.isChecking && (
+                  <span className="validation-icon checking">
+                    <i className="bi bi-arrow-repeat"></i>
+                  </span>
+                )}
+                {!nicknameValidation.isChecking && nicknameValidation.isValid === true && (
+                  <span className="validation-icon valid">
+                    <i className="bi bi-check-circle-fill"></i>
+                  </span>
+                )}
+                {!nicknameValidation.isChecking && nicknameValidation.isValid === false && (
+                  <span className="validation-icon invalid">
+                    <i className="bi bi-x-circle-fill"></i>
+                  </span>
+                )}
               </div>
+              {nicknameValidation.message && nicknameValidation.isValid === false && (
+                <div className="validation-message invalid">{nicknameValidation.message}</div>
+              )}
+
               <div className="input-group">
                 <i className="bi bi-envelope"></i>
                 <input
@@ -96,9 +236,35 @@ const AuthCard: React.FC<AuthCardProps> = ({ onLogin, onSignup, isLoading }) => 
                   placeholder="이메일"
                   value={signupEmail}
                   onChange={(e) => setSignupEmail(e.target.value)}
+                  className={
+                    emailValidation.isValid === true
+                      ? 'valid'
+                      : emailValidation.isValid === false
+                      ? 'invalid'
+                      : ''
+                  }
                   required
                 />
+                {emailValidation.isChecking && (
+                  <span className="validation-icon checking">
+                    <i className="bi bi-arrow-repeat"></i>
+                  </span>
+                )}
+                {!emailValidation.isChecking && emailValidation.isValid === true && (
+                  <span className="validation-icon valid">
+                    <i className="bi bi-check-circle-fill"></i>
+                  </span>
+                )}
+                {!emailValidation.isChecking && emailValidation.isValid === false && (
+                  <span className="validation-icon invalid">
+                    <i className="bi bi-x-circle-fill"></i>
+                  </span>
+                )}
               </div>
+              {emailValidation.message && emailValidation.isValid === false && (
+                <div className="validation-message invalid">{emailValidation.message}</div>
+              )}
+
               <div className="input-group">
                 <i className="bi bi-lock"></i>
                 <input
@@ -109,7 +275,7 @@ const AuthCard: React.FC<AuthCardProps> = ({ onLogin, onSignup, isLoading }) => 
                   required
                 />
               </div>
-              <button type="submit" className="submit-btn" disabled={isLoading}>
+              <button type="submit" className="submit-btn" disabled={isSignupDisabled}>
                 {isLoading ? '가입 중...' : '가입하기'}
               </button>
             </form>
@@ -137,7 +303,7 @@ const StyledWrapper = styled.div`
 
   .flip-card {
     width: 100%;
-    height: 420px;
+    height: 480px;
     position: relative;
   }
 
@@ -174,7 +340,7 @@ const StyledWrapper = styled.div`
 
   .card-header {
     text-align: center;
-    margin-bottom: 28px;
+    margin-bottom: 24px;
 
     h2 {
       font-size: 24px;
@@ -197,9 +363,9 @@ const StyledWrapper = styled.div`
 
   .input-group {
     position: relative;
-    margin-bottom: 16px;
+    margin-bottom: 12px;
 
-    i {
+    i:first-child {
       position: absolute;
       left: 16px;
       top: 50%;
@@ -211,7 +377,7 @@ const StyledWrapper = styled.div`
 
     input {
       width: 100%;
-      padding: 14px 16px 14px 48px;
+      padding: 14px 44px 14px 48px;
       font-size: 15px;
       border: 2px solid #E2E8F0;
       border-radius: 12px;
@@ -229,14 +395,64 @@ const StyledWrapper = styled.div`
         box-shadow: 0 0 0 4px rgba(108, 99, 255, 0.1);
       }
 
-      &:focus + i,
-      &:focus ~ i {
-        color: #6C63FF;
+      &.valid {
+        border-color: #48BB78;
+        background: #F0FFF4;
+      }
+
+      &.invalid {
+        border-color: #FC8181;
+        background: #FFF5F5;
       }
     }
 
-    &:focus-within i {
+    &:focus-within i:first-child {
       color: #6C63FF;
+    }
+
+    .validation-icon {
+      position: absolute;
+      right: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 18px;
+
+      &.checking {
+        color: #A0AEC0;
+        animation: spin 1s linear infinite;
+      }
+
+      &.valid {
+        color: #48BB78;
+      }
+
+      &.invalid {
+        color: #FC8181;
+      }
+    }
+  }
+
+  @keyframes spin {
+    from {
+      transform: translateY(-50%) rotate(0deg);
+    }
+    to {
+      transform: translateY(-50%) rotate(360deg);
+    }
+  }
+
+  .validation-message {
+    font-size: 12px;
+    margin-top: -8px;
+    margin-bottom: 12px;
+    padding-left: 16px;
+
+    &.invalid {
+      color: #E53E3E;
+    }
+
+    &.valid {
+      color: #38A169;
     }
   }
 
@@ -270,7 +486,7 @@ const StyledWrapper = styled.div`
 
   .switch-text {
     text-align: center;
-    margin-top: 32px;
+    margin-top: 24px;
     padding-top: 20px;
     border-top: 1px solid #E2E8F0;
     color: #718096;
@@ -297,7 +513,7 @@ const StyledWrapper = styled.div`
     max-width: 100%;
 
     .flip-card {
-      height: 400px;
+      height: 460px;
     }
 
     .flip-card-front,
@@ -306,7 +522,7 @@ const StyledWrapper = styled.div`
     }
 
     .card-header {
-      margin-bottom: 20px;
+      margin-bottom: 16px;
 
       h2 {
         font-size: 22px;
@@ -314,10 +530,10 @@ const StyledWrapper = styled.div`
     }
 
     .input-group {
-      margin-bottom: 14px;
+      margin-bottom: 10px;
 
       input {
-        padding: 12px 14px 12px 44px;
+        padding: 12px 40px 12px 44px;
       }
     }
 

@@ -218,3 +218,39 @@ async def logout(user: dict = Depends(get_current_user)):
     로그아웃 (클라이언트에서 토큰 삭제)
     """
     return {"message": "로그아웃 성공"}
+
+
+@router.get("/check-email")
+async def check_email(email: str):
+    """
+    이메일 중복 확인
+    """
+    with get_cursor() as cur:
+        cur.execute("SELECT id FROM users WHERE email = %s", (email,))
+        exists = cur.fetchone() is not None
+
+    return {
+        "available": not exists,
+        "message": "이미 가입된 이메일입니다" if exists else "사용 가능한 이메일입니다"
+    }
+
+
+@router.get("/check-nickname")
+async def check_nickname(nickname: str):
+    """
+    닉네임 중복 확인
+    """
+    if len(nickname) < 2:
+        return {
+            "available": False,
+            "message": "닉네임은 2자 이상이어야 합니다"
+        }
+
+    with get_cursor() as cur:
+        cur.execute("SELECT id FROM users WHERE nickname = %s", (nickname,))
+        exists = cur.fetchone() is not None
+
+    return {
+        "available": not exists,
+        "message": "이미 사용 중인 닉네임입니다" if exists else "사용 가능한 닉네임입니다"
+    }
